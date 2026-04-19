@@ -141,13 +141,12 @@ def genereaza_harta_parcele_contur(w=800, h=600, seed=42) -> np.ndarray:
 
 
 def detecteaza_cultura_din_culoare(roi_bgr: np.ndarray) -> str:
-    """Detecteaza cultura dominanta dintr-un ROI pe baza culorii medii."""
+    """Detecteaza cultura dominanta dintr-un ROI pe baza culorii medii (imagini sintetice)."""
     if roi_bgr.size == 0:
         return "Necunoscuta"
     medie_bgr = roi_bgr.mean(axis=(0, 1))
     B, G, R = medie_bgr[0], medie_bgr[1], medie_bgr[2]
 
-    # Reguli simple bazate pe dominanta canal
     if R > 150 and G > 130 and B < 80:
         return "Floarea-soarelui"
     if G > 140 and R < 120 and B < 100:
@@ -158,6 +157,50 @@ def detecteaza_cultura_din_culoare(roi_bgr: np.ndarray) -> str:
         return "Lucerna"
     if R > 80 and G > 70 and B > 40 and R < 160:
         return "Fanete"
+    return "Necunoscuta"
+
+
+def detecteaza_cultura_hsv(roi_bgr: np.ndarray) -> str:
+    """
+    Detecteaza cultura dominanta din ROI folosind spatiul HSV.
+    Potrivit pentru imagini reale (drone / avion / satelit).
+    """
+    if roi_bgr.size == 0:
+        return "Necunoscuta"
+    if roi_bgr.ndim == 2:
+        return "Necunoscuta"
+
+    roi_hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
+    H = roi_hsv[:, :, 0].mean()   # 0-180 in OpenCV
+    S = roi_hsv[:, :, 1].mean()   # 0-255
+    V = roi_hsv[:, :, 2].mean()   # 0-255
+
+    # Verde intens, saturat → Porumb / Lucerna
+    if 35 <= H <= 85 and S > 60:
+        if V > 110:
+            return "Porumb"
+        return "Lucerna"
+
+    # Galben-verde → Grau (maturizare) / Floarea-soarelui
+    if 20 <= H < 40 and S > 40:
+        if V > 130:
+            return "Floarea-soarelui"
+        return "Grau"
+
+    # Verde pal sau albastru-verde → Fanete / pasuni
+    if 85 < H <= 130 and S > 25:
+        return "Fanete"
+
+    # Brun sau rosiatic → sol / mirisite
+    if H < 20 or H > 150:
+        if S > 30:
+            return "Grau"    # sol deschis / miriste
+        return "Fanete"
+
+    # Saturat scazut → sol gol sau teren arid
+    if S < 30:
+        return "Necunoscuta"
+
     return "Necunoscuta"
 
 
@@ -239,25 +282,46 @@ def inscrie_text_parcela(img: np.ndarray, contur, info: dict,
 def analizeaza_contururi(img_bgr: np.ndarray,
                           scala_m_per_px: float,
                           aria_min_px: int = 2000,
-                          id_fermier_prefix: str = "APIA-GJ") -> tuple:
+                          id_fermier_prefix: str = "APIA-GJ",
+                          mod_real: bool = False,
+                          canny_low: int = 20,
+                          canny_high: int = 80) -> tuple:
     """
-    Pipeline complet detectie contururi:
-    1. Masca non-negra (bordurile dintre parcele sunt negre)
-    2. Morfologie Close+Open pentru curatare
-    3. findContours RETR_EXTERNAL
-    4. Filtreaza dupa arie minima
-    5. Calculeaza aria, perimetrul, cultura
-    6. Inscrie pe imagine
-    Returneaza (img_rezultat, lista_parcele)
-    """
-    # Masca: pixeli cu cel putin un canal > 25 = parcel content (nu bordura)
-    mask = np.any(img_bgr > 25, axis=2).astype(np.uint8) * 255
+    Pipeline complet detectie contururi.
 
-    # Morfologie: Close inchide gaurile mici, Open elimina zgomotul izolat
-    kernel_c = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
-    kernel_o = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    thresh_clean = cv2.morphologyEx(mask,        cv2.MORPH_CLOSE, kernel_c)
-    thresh_clean = cv2.morphologyEx(thresh_clean, cv2.MORPH_OPEN,  kernel_o)
+    mod_real=False (imagine sintetica):
+      - Masca non-negra (borduri negre clare intre parcele)
+      - Morfologie Close+Open
+
+    mod_real=True (imagine reala drone/avion/satelit):
+      - Canny edge detection pe grayscale blur
+      - Dilatare muchii → interior parcelelor devine alb
+      - Morfologie Close+Open pentru curatare
+      - Detectie culturi pe HSV
+    """
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+
+    if mod_real:
+        # Pipeline imagini reale
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        edges = cv2.Canny(blur, canny_low, canny_high)
+        # Dilateaza muchiile ca sa inchida contururile parcelelor
+        kernel_d = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        dilated = cv2.dilate(edges, kernel_d, iterations=3)
+        # Inversam: interiorul parcelei devine alb
+        filled = cv2.bitwise_not(dilated)
+        # Morfologie: Close inchide gauri, Open elimina zgomot
+        kernel_c = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+        kernel_o = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+        thresh_clean = cv2.morphologyEx(filled, cv2.MORPH_CLOSE, kernel_c)
+        thresh_clean = cv2.morphologyEx(thresh_clean, cv2.MORPH_OPEN, kernel_o)
+    else:
+        # Pipeline imagine sintetica — masca non-negra
+        mask = np.any(img_bgr > 25, axis=2).astype(np.uint8) * 255
+        kernel_c = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
+        kernel_o = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+        thresh_clean = cv2.morphologyEx(mask,        cv2.MORPH_CLOSE, kernel_c)
+        thresh_clean = cv2.morphologyEx(thresh_clean, cv2.MORPH_OPEN,  kernel_o)
 
     contururi, _ = cv2.findContours(thresh_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -283,7 +347,10 @@ def analizeaza_contururi(img_bgr: np.ndarray,
         # Detectie cultura din culoarea ROI
         x, y, w, h = cv2.boundingRect(contur)
         roi = img_bgr[y:y+h, x:x+w]
-        cultura = detecteaza_cultura_din_culoare(roi)
+        if mod_real:
+            cultura = detecteaza_cultura_hsv(roi)
+        else:
+            cultura = detecteaza_cultura_din_culoare(roi)
 
         # ID fermier
         prefix_cultura = {
@@ -476,6 +543,24 @@ with tab2:
             st.metric("Scala activa", f"{scala_m_per_px} m/px")
 
         st.divider()
+        # Mod automat: imagine reala daca e uploadata
+        mod_real_auto = uploaded is not None
+        mod_real = st.checkbox(
+            "Mod imagine reala (Canny edge detection)",
+            value=mod_real_auto,
+            help="Activat automat cand incarci o imagine proprie. "
+                 "Foloseste detectie Canny in loc de masca non-negru.",
+            key="mod_real"
+        )
+
+        if mod_real:
+            st.markdown("**Parametri Canny (ajusteaza daca contururile lipsesc):**")
+            canny_low  = st.slider("Prag Canny minim:", 5, 100,  20, 5, key="canny_low")
+            canny_high = st.slider("Prag Canny maxim:", 20, 300, 80, 10, key="canny_high")
+        else:
+            canny_low, canny_high = 20, 80
+
+        st.divider()
         st.markdown("**Filtrare contururi:**")
         aria_min_px = st.slider(
             "Arie minima (pixeli):",
@@ -512,11 +597,15 @@ with tab2:
         if ruleaza:
             with st.spinner("Detectez contururi..."):
                 img_rez, parcele_detectate = analizeaza_contururi(
-                    img_src, scala_m_per_px, aria_min_px, id_prefix
+                    img_src, scala_m_per_px, aria_min_px, id_prefix,
+                    mod_real=mod_real,
+                    canny_low=canny_low,
+                    canny_high=canny_high,
                 )
             st.session_state["img_rezultat"]      = img_rez
             st.session_state["parcele_detectate"] = parcele_detectate
             st.session_state["scala_m_per_px"]    = scala_m_per_px
+            st.session_state["mod_real_folosit"]  = mod_real
 
     # Afiseaza rezultatul sub cele doua coloane
     if ruleaza and "img_rezultat" in st.session_state:
@@ -541,30 +630,53 @@ with tab2:
         )
 
         # Intermediare diagnostice
+        _mod_real_f = st.session_state.get("mod_real_folosit", False)
         with st.expander("Imagini intermediare pipeline"):
-            # Pasul 1: masca non-negra
-            mask_   = np.any(img_src > 25, axis=2).astype(np.uint8) * 255
-            # Pasul 2: Close
-            k_c_ = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
-            close_ = cv2.morphologyEx(mask_, cv2.MORPH_CLOSE, k_c_)
-            # Pasul 3: Open
-            k_o_ = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-            open_  = cv2.morphologyEx(close_, cv2.MORPH_OPEN,  k_o_)
-            # Pasul 4: contururi vizualizate pe fundal alb
-            viz_cnt = np.ones_like(img_src) * 255
-            cnts_viz, _ = cv2.findContours(open_, cv2.RETR_EXTERNAL,
-                                            cv2.CHAIN_APPROX_SIMPLE)
-            cv2.drawContours(viz_cnt, cnts_viz, -1, (0, 0, 255), 2)
-
-            c1, c2, c3, c4 = st.columns(4)
-            with c1:
-                st.image(mask_,    caption="Masca non-negra", use_container_width=True)
-            with c2:
-                st.image(close_,   caption="Morfologie Close", use_container_width=True)
-            with c3:
-                st.image(open_,    caption="Morfologie Open", use_container_width=True)
-            with c4:
-                st.image(viz_cnt,  caption="Contururi gasite", use_container_width=True)
+            gray_d = cv2.cvtColor(img_src, cv2.COLOR_BGR2GRAY)
+            if _mod_real_f:
+                blur_d  = cv2.GaussianBlur(gray_d, (5, 5), 0)
+                edges_d = cv2.Canny(blur_d,
+                                    st.session_state.get("canny_low",  20),
+                                    st.session_state.get("canny_high", 80))
+                kd_ = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                dil_d = cv2.dilate(edges_d, kd_, iterations=3)
+                fill_d = cv2.bitwise_not(dil_d)
+                k_c_ = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+                k_o_ = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+                close_ = cv2.morphologyEx(fill_d, cv2.MORPH_CLOSE, k_c_)
+                open_  = cv2.morphologyEx(close_, cv2.MORPH_OPEN,  k_o_)
+                viz_cnt = np.ones_like(img_src) * 255
+                cnts_viz, _ = cv2.findContours(open_, cv2.RETR_EXTERNAL,
+                                               cv2.CHAIN_APPROX_SIMPLE)
+                cv2.drawContours(viz_cnt, cnts_viz, -1, (0, 0, 255), 2)
+                c1, c2, c3, c4 = st.columns(4)
+                with c1:
+                    st.image(edges_d, caption="Canny edges", use_container_width=True)
+                with c2:
+                    st.image(dil_d,   caption="Dilatare muchii", use_container_width=True)
+                with c3:
+                    st.image(open_,   caption="Close+Open", use_container_width=True)
+                with c4:
+                    st.image(viz_cnt, caption="Contururi gasite", use_container_width=True)
+            else:
+                mask_   = np.any(img_src > 25, axis=2).astype(np.uint8) * 255
+                k_c_ = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
+                close_ = cv2.morphologyEx(mask_, cv2.MORPH_CLOSE, k_c_)
+                k_o_ = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+                open_  = cv2.morphologyEx(close_, cv2.MORPH_OPEN,  k_o_)
+                viz_cnt = np.ones_like(img_src) * 255
+                cnts_viz, _ = cv2.findContours(open_, cv2.RETR_EXTERNAL,
+                                               cv2.CHAIN_APPROX_SIMPLE)
+                cv2.drawContours(viz_cnt, cnts_viz, -1, (0, 0, 255), 2)
+                c1, c2, c3, c4 = st.columns(4)
+                with c1:
+                    st.image(mask_,   caption="Masca non-negra", use_container_width=True)
+                with c2:
+                    st.image(close_,  caption="Morfologie Close", use_container_width=True)
+                with c3:
+                    st.image(open_,   caption="Morfologie Open", use_container_width=True)
+                with c4:
+                    st.image(viz_cnt, caption="Contururi gasite", use_container_width=True)
 
     elif not ruleaza:
         st.info("Configureaza parametrii si apasa **Detecteaza Contururi**.")
