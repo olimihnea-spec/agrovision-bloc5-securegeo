@@ -12,3 +12,5 @@ easyocr>=1.7.0
 pytesseract>=0.3.10
 transformers>=4.35.0
 torch>=2.0.0
+scikit-image>=0.21.0
+scipy>=1.10.0

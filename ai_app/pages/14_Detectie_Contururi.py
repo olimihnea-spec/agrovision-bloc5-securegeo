@@ -17,6 +17,15 @@ try:
 except ImportError:
     PLOTLY_OK = False
 
+try:
+    from skimage.segmentation import slic, watershed, find_boundaries
+    from skimage.color import rgb2lab
+    from skimage.feature import peak_local_max
+    from scipy import ndimage as ndi
+    SKIMAGE_OK = True
+except ImportError:
+    SKIMAGE_OK = False
+
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
@@ -629,6 +638,185 @@ def detecteaza_gradient_advanced(img_bgr: np.ndarray,
     return img_rezultat, parcele, regions
 
 
+def detecteaza_slic_watershed(img_bgr: np.ndarray,
+                               scala_m_per_px: float,
+                               aria_min_px: int = 14000,
+                               id_fermier_prefix: str = "APIA-GJ",
+                               masca_compas: bool = True,
+                               masca_minimap: bool = True,
+                               masca_text_ui: bool = True,
+                               n_segments: int = 350,
+                               aspect_max: float = 14.0,
+                               culoare_contur=(255, 255, 255),
+                               arata_cultura: bool = False) -> tuple:
+    """
+    Algoritm SLIC superpixeli + Watershed pentru imagini agricole aeriene.
+    Pipeline:
+    1. Mascare UI relativa la dimensiunile imaginii
+    2. pyrMeanShiftFiltering + SLIC in spatiu LAB
+    3. Harta elevatie = gradient morfologic + frontiere SLIC + zone luminoase
+    4. Masca teren HSV (verde/sol/padure)
+    5. Distance transform + peak_local_max -> markeri watershed
+    6. Watershed segmentation -> regiuni parcele
+    7. Filtrare + approxPolyDP + inscriere text stil Google Earth
+    """
+    if not SKIMAGE_OK:
+        return img_bgr.copy(), [], None
+
+    h, w = img_bgr.shape[:2]
+
+    # ── 1. Mascare UI ─────────────────────────────────────────────────────────
+    valid = np.ones((h, w), dtype=np.uint8)
+    if masca_compas:
+        # compas: ~stanga-sus: x=0..28%, y=8%..33%
+        cv2.rectangle(valid, (0, int(h*0.08)), (int(w*0.28), int(h*0.33)), 0, -1)
+    if masca_minimap:
+        # mini-harta: ~stanga-jos: x=0..37%, y=64%..100%
+        cv2.rectangle(valid, (0, int(h*0.64)), (int(w*0.37), h), 0, -1)
+    if masca_text_ui:
+        # telemetrie/logo: ~dreapta-jos: x=70%..100%, y=66%..100%
+        cv2.rectangle(valid, (int(w*0.70), int(h*0.66)), (w, h), 0, -1)
+    valid_bool = valid.astype(bool)
+
+    # ── 2. Mean Shift + SLIC in LAB ───────────────────────────────────────────
+    smoothed_bgr = cv2.pyrMeanShiftFiltering(img_bgr, sp=16, sr=24)
+    smoothed_rgb = cv2.cvtColor(smoothed_bgr, cv2.COLOR_BGR2RGB)
+    lab = rgb2lab(smoothed_rgb)
+
+    segments = slic(
+        lab,
+        n_segments=n_segments,
+        compactness=12,
+        sigma=1.2,
+        start_label=1,
+        mask=valid_bool,
+        channel_axis=-1,
+    )
+
+    # ── 3. Harta elevatie pentru watershed ───────────────────────────────────
+    gray = cv2.cvtColor(smoothed_bgr, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    grad = cv2.morphologyEx(
+        gray, cv2.MORPH_GRADIENT,
+        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    )
+
+    slic_bounds = find_boundaries(segments, mode="outer").astype(np.uint8) * 255
+
+    _, bright = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+    bright = cv2.morphologyEx(
+        bright, cv2.MORPH_OPEN,
+        cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)), iterations=1
+    )
+
+    elevation = cv2.normalize(grad, None, 0, 255, cv2.NORM_MINMAX)
+    elevation = cv2.addWeighted(elevation, 0.7, slic_bounds, 0.7, 0)
+    elevation = cv2.addWeighted(elevation, 1.0, bright, 0.6, 0)
+    elevation = np.where(valid_bool, elevation, 255).astype(np.uint8)
+
+    # ── 4. Masca teren HSV ────────────────────────────────────────────────────
+    hsv = cv2.cvtColor(smoothed_bgr, cv2.COLOR_BGR2HSV)
+    mask_green   = cv2.inRange(hsv, np.array([25, 18, 25]),  np.array([95, 255, 255]))
+    mask_brown   = cv2.inRange(hsv, np.array([5,  18, 20]),  np.array([28, 255, 220]))
+    mask_darkveg = cv2.inRange(hsv, np.array([20, 8,  10]),  np.array([85, 180, 125]))
+
+    land = cv2.bitwise_or(mask_green, mask_brown)
+    land = cv2.bitwise_or(land, mask_darkveg)
+    land = cv2.bitwise_and(land, valid)
+    land = cv2.morphologyEx(land, cv2.MORPH_CLOSE,
+                             cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)),
+                             iterations=2)
+    land = cv2.morphologyEx(land, cv2.MORPH_OPEN,
+                             cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)),
+                             iterations=1)
+
+    # ── 5. Distance transform + markeri ──────────────────────────────────────
+    dist      = cv2.distanceTransform(land, cv2.DIST_L2, 5)
+    dist_norm = cv2.normalize(dist, None, 0, 1.0, cv2.NORM_MINMAX)
+
+    coords = peak_local_max(
+        dist_norm,
+        min_distance=35,
+        threshold_abs=0.12,
+        labels=(land > 0),
+    )
+    markers = np.zeros_like(gray, dtype=np.int32)
+    for i, (r, c) in enumerate(coords, start=1):
+        markers[r, c] = i
+    markers = ndi.label(markers > 0)[0]
+
+    # ── 6. Watershed ─────────────────────────────────────────────────────────
+    labels_ws = watershed(elevation, markers=markers, mask=(land > 0))
+
+    # ── 7. Extrage parcele ────────────────────────────────────────────────────
+    img_rezultat = img_bgr.copy()
+    parcele      = []
+    nr_parcela   = 1
+    aria_totala  = h * w
+
+    for lbl in np.unique(labels_ws):
+        if lbl == 0:
+            continue
+        reg      = np.uint8(labels_ws == lbl) * 255
+        area_reg = int(cv2.countNonZero(reg))
+        if area_reg < aria_min_px:
+            continue
+
+        contururi_c, _ = cv2.findContours(reg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not contururi_c:
+            continue
+        cnt      = max(contururi_c, key=cv2.contourArea)
+        cnt_area = cv2.contourArea(cnt)
+        if cnt_area < aria_min_px or cnt_area > aria_totala * 0.90:
+            continue
+
+        x_b, y_b, w_b, h_b = cv2.boundingRect(cnt)
+        if y_b < int(h * 0.08):   # elimina cer / orizont
+            continue
+        aspect = max(w_b / max(h_b, 1), h_b / max(w_b, 1))
+        if aspect > aspect_max:
+            continue
+
+        perim  = cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, 0.0035 * perim, True)
+
+        metrici = calculeaza_metrici_exacte(cnt, scala_m_per_px)
+        roi     = img_bgr[y_b:y_b+h_b, x_b:x_b+w_b]
+        cultura = detecteaza_cultura_hsv(roi)
+
+        prefix_cultura = {
+            "Grau": "GR", "Floarea-soarelui": "FS",
+            "Porumb": "PO", "Lucerna": "LU",
+            "Fanete": "FA", "Necunoscuta": "XX"
+        }.get(cultura, "XX")
+        id_parcela = f"{id_fermier_prefix}-{prefix_cultura}-{nr_parcela:03d}"
+
+        info = {
+            "id":           id_parcela,
+            "cultura":      cultura,
+            "aria_ha":      metrici["aria_ha"],
+            "aria_m2":      metrici["aria_m2"],
+            "aria_px":      int(metrici["aria_px2"]),
+            "perim_m":      metrici["perim_m"],
+            "perim_px":     metrici["perim_px"],
+            "compactitate": metrici["compactitate"],
+            "centru":       centru_contur(cnt),
+            "nr":           nr_parcela,
+        }
+
+        img_rezultat = inscrie_text_parcela(
+            img_rezultat, approx, info,
+            culoare_contur=culoare_contur,
+            grosime_contur=3,
+            arata_cultura=arata_cultura,
+        )
+        parcele.append(info)
+        nr_parcela += 1
+
+    return img_rezultat, parcele, land
+
+
 def segmenteaza_hsv_agricol(img_bgr: np.ndarray,
                               masca_compas: bool = True,
                               masca_minimap: bool = True,
@@ -877,26 +1065,31 @@ with tab2:
 
         st.divider()
         st.markdown("**Metoda detectie:**")
+        slic_label = ("SLIC + Watershed (recomandat imagini reale)"
+                      if SKIMAGE_OK else
+                      "SLIC + Watershed [lipseste scikit-image]")
         metoda_aleasa = st.selectbox(
             "Algoritm segmentare:",
             [
-                "Gradient Avansat (Mean Shift + CLAHE — recomandat)",
+                slic_label,
+                "Gradient Avansat (Mean Shift + CLAHE)",
                 "HSV Vegetatie/Sol",
                 "Linii albe (Google Earth / QGIS)",
                 "K-means (segmentare culori)",
                 "Canny (contraste puternice)",
                 "Masca non-negru (imagine sintetica)",
             ],
-            index=0 if uploaded is not None else 5,
+            index=0 if uploaded is not None else 6,
             key="metoda_seg"
         )
         metoda_map = {
-            "Gradient Avansat (Mean Shift + CLAHE — recomandat)": "gradient",
-            "HSV Vegetatie/Sol":                                   "hsv",
-            "Linii albe (Google Earth / QGIS)":                   "linii_albe",
-            "K-means (segmentare culori)":                        "kmeans",
-            "Canny (contraste puternice)":                        "canny",
-            "Masca non-negru (imagine sintetica)":                "masca",
+            slic_label:                                             "slic",
+            "Gradient Avansat (Mean Shift + CLAHE)":               "gradient",
+            "HSV Vegetatie/Sol":                                    "hsv",
+            "Linii albe (Google Earth / QGIS)":                    "linii_albe",
+            "K-means (segmentare culori)":                         "kmeans",
+            "Canny (contraste puternice)":                         "canny",
+            "Masca non-negru (imagine sintetica)":                 "masca",
         }
         metoda   = metoda_map[metoda_aleasa]
         mod_real = metoda != "masca"
@@ -905,13 +1098,23 @@ with tab2:
         canny_low, canny_high, kmeans_k, alb_prag = 30, 150, 6, 180
         masca_compas = masca_minimap = masca_text_ui = False
         aspect_max = 12.0
+        n_segments = 350
 
-        if metoda in ("gradient", "hsv"):
+        if metoda in ("slic", "gradient", "hsv"):
             st.markdown("**Mascheaza UI Google Earth:**")
             masca_compas  = st.checkbox("Compas (stanga sus)",      value=True, key="m_compas")
             masca_minimap = st.checkbox("Mini-harta (stanga jos)",   value=True, key="m_mini")
             masca_text_ui = st.checkbox("Text / logo (dreapta jos)", value=True, key="m_text")
-            if metoda == "gradient":
+            if metoda == "slic":
+                n_segments = st.slider("Superpixeli SLIC:", 150, 600, 350, 50, key="n_seg",
+                                       help="Mai multi = granularitate mai fina, mai lent")
+                aspect_max = st.slider("Aspect ratio maxim:", 3.0, 20.0, 14.0, 0.5,
+                                       key="aspect_max_slic")
+                if not SKIMAGE_OK:
+                    st.error("scikit-image si scipy nu sunt instalate. "
+                             "Ruleaza: `pip install scikit-image scipy`")
+            elif metoda == "gradient":
+                n_segments = 350
                 aspect_max = st.slider("Aspect ratio maxim:", 3.0, 20.0, 12.0, 0.5,
                                        help="Parcele mai alungite sunt ignorate",
                                        key="aspect_max")
@@ -961,8 +1164,22 @@ with tab2:
                  caption=f"Dimensiune: {img_src.shape[1]}×{img_src.shape[0]} px")
 
         if ruleaza:
-            with st.spinner("Detectez contururi... (Gradient Avansat poate dura 5-15s)"):
-                if metoda == "gradient":
+            with st.spinner("Detectez contururi... (SLIC/Gradient poate dura 10-30s)"):
+                if metoda == "slic" and SKIMAGE_OK:
+                    img_rez, parcele_detectate, mask_grad = detecteaza_slic_watershed(
+                        img_src, scala_m_per_px,
+                        aria_min_px=aria_min_px,
+                        id_fermier_prefix=id_prefix,
+                        masca_compas=masca_compas,
+                        masca_minimap=masca_minimap,
+                        masca_text_ui=masca_text_ui,
+                        n_segments=n_segments,
+                        aspect_max=aspect_max,
+                        culoare_contur=culoare_contur_bgr,
+                        arata_cultura=arata_cultura,
+                    )
+                    st.session_state["mask_gradient"] = mask_grad
+                elif metoda == "gradient":
                     img_rez, parcele_detectate, mask_grad = detecteaza_gradient_advanced(
                         img_src, scala_m_per_px,
                         aria_min_px=aria_min_px,
