@@ -1137,9 +1137,9 @@ with tab2:
         st.divider()
         st.markdown("**Filtrare contururi:**")
         aria_min_px = st.slider(
-            "Arie minima (pixeli):",
-            min_value=100, max_value=50000, value=8000, step=500,
-            help="Contururi mai mici sunt ignorate",
+            "Arie minima (pixeli²):",
+            min_value=100, max_value=50000, value=1000, step=100,
+            help="Contururi mai mici sunt ignorate. Scade daca gaseste 0 parcele.",
             key="aria_min"
         )
         id_prefix = st.text_input("Prefix ID fermier:", value="APIA-GJ", key="id_prefix")
@@ -1164,8 +1164,19 @@ with tab2:
                  caption=f"Dimensiune: {img_src.shape[1]}×{img_src.shape[0]} px")
 
         if ruleaza:
-            with st.spinner("Detectez contururi... (SLIC/Gradient poate dura 10-30s)"):
-                if metoda == "slic" and SKIMAGE_OK:
+            # Fallback automat: daca SLIC ales dar scikit-image lipseste
+            metoda_efectiva = metoda
+            if metoda == "slic" and not SKIMAGE_OK:
+                st.warning(
+                    "scikit-image nu este instalat — folosesc Gradient Avansat ca fallback. "
+                    "Instaleaza cu: `pip install scikit-image scipy` si reporneste Streamlit."
+                )
+                metoda_efectiva = "gradient"
+
+            with st.spinner("Detectez contururi... poate dura 10-30s"):
+                mask_grad = None
+
+                if metoda_efectiva == "slic":
                     img_rez, parcele_detectate, mask_grad = detecteaza_slic_watershed(
                         img_src, scala_m_per_px,
                         aria_min_px=aria_min_px,
@@ -1178,8 +1189,8 @@ with tab2:
                         culoare_contur=culoare_contur_bgr,
                         arata_cultura=arata_cultura,
                     )
-                    st.session_state["mask_gradient"] = mask_grad
-                elif metoda == "gradient":
+
+                elif metoda_efectiva == "gradient":
                     img_rez, parcele_detectate, mask_grad = detecteaza_gradient_advanced(
                         img_src, scala_m_per_px,
                         aria_min_px=aria_min_px,
@@ -1191,14 +1202,14 @@ with tab2:
                         culoare_contur=culoare_contur_bgr,
                         arata_cultura=arata_cultura,
                     )
-                    st.session_state["mask_gradient"] = mask_grad
+
                 else:
                     img_rez, parcele_detectate = analizeaza_contururi(
                         img_src, scala_m_per_px, aria_min_px, id_prefix,
                         mod_real=mod_real,
                         canny_low=canny_low,
                         canny_high=canny_high,
-                        metoda=metoda,
+                        metoda=metoda_efectiva,
                         kmeans_k=kmeans_k,
                         alb_prag=alb_prag,
                         culoare_contur_global=culoare_contur_bgr,
@@ -1207,6 +1218,18 @@ with tab2:
                         masca_minimap=masca_minimap,
                         masca_text_ui=masca_text_ui,
                     )
+
+                if mask_grad is not None:
+                    st.session_state["mask_gradient"] = mask_grad
+
+                n_detectate = len(parcele_detectate)
+                if n_detectate == 0:
+                    st.warning(
+                        f"0 parcele detectate cu metoda **{metoda_efectiva}**. "
+                        "Incearca: scade **Arie minima** la 500-1000 px, "
+                        "debifeza mastile UI, sau schimba metoda."
+                    )
+
             st.session_state["img_rezultat"]       = img_rez
             st.session_state["parcele_detectate"]  = parcele_detectate
             st.session_state["scala_m_per_px"]     = scala_m_per_px
