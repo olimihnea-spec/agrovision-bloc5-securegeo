@@ -325,8 +325,10 @@ with tab2:
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — EVALUARE COMPLETA
 # ══════════════════════════════════════════════════════════════════════════════
+KEYS_NEEDED = ["best_pipe", "y_pred", "y_test", "X_test", "clase", "acc", "f1", "cv_score"]
+
 with tab3:
-    if "best_pipe" not in st.session_state:
+    if not all(k in st.session_state for k in KEYS_NEEDED):
         st.info("Mergi la Tab-ul **Antrenare** si ruleaza modelul mai intai.")
     else:
         best   = st.session_state["best_pipe"]
@@ -463,8 +465,11 @@ with tab3:
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — EXPORT & RAPORT
 # ══════════════════════════════════════════════════════════════════════════════
+KEYS_EXPORT = ["best_pipe", "y_pred", "y_test", "acc", "f1", "cv_score",
+               "clase", "algoritm", "best_params", "test_pct", "k_cv"]
+
 with tab4:
-    if "best_pipe" not in st.session_state:
+    if not all(k in st.session_state for k in KEYS_EXPORT):
         st.info("Mergi la Tab-ul **Antrenare** si ruleaza modelul mai intai.")
     else:
         best       = st.session_state["best_pipe"]
