@@ -482,6 +482,153 @@ def analizeaza_contururi(img_bgr: np.ndarray,
     return img_rezultat, parcele
 
 
+def detecteaza_gradient_advanced(img_bgr: np.ndarray,
+                                   scala_m_per_px: float,
+                                   aria_min_px: int = 12000,
+                                   id_fermier_prefix: str = "APIA-GJ",
+                                   masca_compas: bool = True,
+                                   masca_minimap: bool = True,
+                                   masca_text_ui: bool = True,
+                                   aspect_max: float = 12.0,
+                                   culoare_contur=(255, 255, 255),
+                                   arata_cultura: bool = False) -> tuple:
+    """
+    Algoritm avansat pentru imagini aeriene oblice (avion / Google Earth):
+    1. Mascare UI (compas, mini-harta, telemetrie) — coordonate relative la dimensiunile imaginii
+    2. pyrMeanShiftFiltering — simplificare coloristica
+    3. CLAHE — contrast local
+    4. Bariere = gradient morfologic + pixeli luminosi (drumuri)
+    5. Regiuni = inversul barierelor + morfologie
+    6. connectedComponentsWithStats — componente conexe
+    7. Filtrare aspect ratio + pozitie y
+    8. approxPolyDP — simplificare contur
+    """
+    h, w = img_bgr.shape[:2]
+
+    # ── 1. Mascare UI overlay ──────────────────────────────────────────────────
+    valid = np.ones((h, w), dtype=np.uint8) * 255
+    if masca_compas:
+        # compas: ~stanga-sus, ~28% lat x ~33% inaltime
+        cv2.rectangle(valid, (0, int(h * 0.08)), (int(w * 0.28), int(h * 0.33)), 0, -1)
+    if masca_minimap:
+        # mini-harta: ~stanga-jos, ~37% lat x ~25% inaltime
+        cv2.rectangle(valid, (0, int(h * 0.64)), (int(w * 0.37), h), 0, -1)
+    if masca_text_ui:
+        # telemetrie/text: ~dreapta-jos, ~30% lat x ~35% inaltime
+        cv2.rectangle(valid, (int(w * 0.70), int(h * 0.66)), (w, h), 0, -1)
+
+    masked = cv2.bitwise_and(img_bgr, img_bgr, mask=valid)
+
+    # ── 2. Mean Shift + CLAHE ──────────────────────────────────────────────────
+    smoothed  = cv2.pyrMeanShiftFiltering(masked, sp=18, sr=28)
+    gray      = cv2.cvtColor(smoothed, cv2.COLOR_BGR2GRAY)
+    clahe     = cv2.createCLAHE(clipLimit=2.2, tileGridSize=(8, 8))
+    gray_eq   = clahe.apply(gray)
+
+    # ── 3. Bariere = gradient morfologic + pixeli luminosi ────────────────────
+    grad = cv2.morphologyEx(
+        gray_eq, cv2.MORPH_GRADIENT,
+        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    )
+    _, edge_bin = cv2.threshold(grad, 18, 255, cv2.THRESH_BINARY)
+
+    _, bright = cv2.threshold(gray_eq, 150, 255, cv2.THRESH_BINARY)
+    bright    = cv2.morphologyEx(
+        bright, cv2.MORPH_OPEN,
+        cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)), iterations=1
+    )
+
+    barriers = cv2.bitwise_or(edge_bin, bright)
+    barriers = cv2.bitwise_and(barriers, valid)
+    barriers = cv2.dilate(
+        barriers, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)), iterations=1
+    )
+
+    # ── 4. Regiuni candidate = inversul barierelor ────────────────────────────
+    regions = cv2.bitwise_and(cv2.bitwise_not(barriers), valid)
+    regions = cv2.morphologyEx(
+        regions, cv2.MORPH_OPEN,
+        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)), iterations=1
+    )
+    regions = cv2.morphologyEx(
+        regions, cv2.MORPH_CLOSE,
+        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)), iterations=2
+    )
+
+    # ── 5. Connected components ───────────────────────────────────────────────
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(regions, connectivity=8)
+
+    img_rezultat = img_bgr.copy()
+    parcele = []
+    nr_parcela = 1
+    aria_totala = h * w
+
+    for lbl in range(1, num_labels):
+        area_px = int(stats[lbl, cv2.CC_STAT_AREA])
+        if area_px < aria_min_px:
+            continue
+
+        comp_mask = np.uint8(labels == lbl) * 255
+        contururi_c, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL,
+                                           cv2.CHAIN_APPROX_SIMPLE)
+        if not contururi_c:
+            continue
+        cnt = max(contururi_c, key=cv2.contourArea)
+        cnt_area = cv2.contourArea(cnt)
+        if cnt_area < aria_min_px:
+            continue
+        if cnt_area > aria_totala * 0.90:
+            continue
+
+        x_b, y_b, w_b, h_b = cv2.boundingRect(cnt)
+        # Elimina fragmente de cer / orizont si noise alungit
+        if y_b < int(h * 0.08):
+            continue
+        aspect = max(w_b / max(h_b, 1), h_b / max(w_b, 1))
+        if aspect > aspect_max:
+            continue
+
+        # Simplificare contur
+        epsilon = 0.003 * cv2.arcLength(cnt, True)
+        approx  = cv2.approxPolyDP(cnt, epsilon, True)
+
+        metrici = calculeaza_metrici_exacte(cnt, scala_m_per_px)
+        roi     = img_bgr[y_b:y_b+h_b, x_b:x_b+w_b]
+        cultura = detecteaza_cultura_hsv(roi)
+
+        prefix_cultura = {
+            "Grau": "GR", "Floarea-soarelui": "FS",
+            "Porumb": "PO", "Lucerna": "LU",
+            "Fanete": "FA", "Necunoscuta": "XX"
+        }.get(cultura, "XX")
+        id_parcela = f"{id_fermier_prefix}-{prefix_cultura}-{nr_parcela:03d}"
+
+        info = {
+            "id":           id_parcela,
+            "cultura":      cultura,
+            "aria_ha":      metrici["aria_ha"],
+            "aria_m2":      metrici["aria_m2"],
+            "aria_px":      int(metrici["aria_px2"]),
+            "perim_m":      metrici["perim_m"],
+            "perim_px":     metrici["perim_px"],
+            "compactitate": metrici["compactitate"],
+            "centru":       centru_contur(cnt),
+            "nr":           nr_parcela,
+            "approx_pts":   len(approx),
+        }
+
+        img_rezultat = inscrie_text_parcela(
+            img_rezultat, approx, info,
+            culoare_contur=culoare_contur,
+            grosime_contur=3,
+            arata_cultura=arata_cultura,
+        )
+        parcele.append(info)
+        nr_parcela += 1
+
+    return img_rezultat, parcele, regions
+
+
 def segmenteaza_hsv_agricol(img_bgr: np.ndarray,
                               masca_compas: bool = True,
                               masca_minimap: bool = True,
@@ -733,34 +880,41 @@ with tab2:
         metoda_aleasa = st.selectbox(
             "Algoritm segmentare:",
             [
-                "HSV Vegetatie/Sol (recomandat imagini reale)",
+                "Gradient Avansat (Mean Shift + CLAHE — recomandat)",
+                "HSV Vegetatie/Sol",
                 "Linii albe (Google Earth / QGIS)",
                 "K-means (segmentare culori)",
                 "Canny (contraste puternice)",
                 "Masca non-negru (imagine sintetica)",
             ],
-            index=0 if uploaded is not None else 4,
+            index=0 if uploaded is not None else 5,
             key="metoda_seg"
         )
         metoda_map = {
-            "HSV Vegetatie/Sol (recomandat imagini reale)": "hsv",
-            "Linii albe (Google Earth / QGIS)":             "linii_albe",
-            "K-means (segmentare culori)":                  "kmeans",
-            "Canny (contraste puternice)":                  "canny",
-            "Masca non-negru (imagine sintetica)":          "masca",
+            "Gradient Avansat (Mean Shift + CLAHE — recomandat)": "gradient",
+            "HSV Vegetatie/Sol":                                   "hsv",
+            "Linii albe (Google Earth / QGIS)":                   "linii_albe",
+            "K-means (segmentare culori)":                        "kmeans",
+            "Canny (contraste puternice)":                        "canny",
+            "Masca non-negru (imagine sintetica)":                "masca",
         }
-        metoda  = metoda_map[metoda_aleasa]
+        metoda   = metoda_map[metoda_aleasa]
         mod_real = metoda != "masca"
 
         # Parametri specifici metodei
         canny_low, canny_high, kmeans_k, alb_prag = 30, 150, 6, 180
         masca_compas = masca_minimap = masca_text_ui = False
+        aspect_max = 12.0
 
-        if metoda == "hsv":
+        if metoda in ("gradient", "hsv"):
             st.markdown("**Mascheaza UI Google Earth:**")
-            masca_compas  = st.checkbox("Compas (stanga sus)",   value=True, key="m_compas")
-            masca_minimap = st.checkbox("Mini-harta (stanga jos)", value=True, key="m_mini")
+            masca_compas  = st.checkbox("Compas (stanga sus)",      value=True, key="m_compas")
+            masca_minimap = st.checkbox("Mini-harta (stanga jos)",   value=True, key="m_mini")
             masca_text_ui = st.checkbox("Text / logo (dreapta jos)", value=True, key="m_text")
+            if metoda == "gradient":
+                aspect_max = st.slider("Aspect ratio maxim:", 3.0, 20.0, 12.0, 0.5,
+                                       help="Parcele mai alungite sunt ignorate",
+                                       key="aspect_max")
         elif metoda == "linii_albe":
             alb_prag = st.slider("Prag alb (pixeli ≥):", 140, 240, 180, 5, key="alb_prag")
         elif metoda == "canny":
@@ -807,21 +961,35 @@ with tab2:
                  caption=f"Dimensiune: {img_src.shape[1]}×{img_src.shape[0]} px")
 
         if ruleaza:
-            with st.spinner("Detectez contururi..."):
-                img_rez, parcele_detectate = analizeaza_contururi(
-                    img_src, scala_m_per_px, aria_min_px, id_prefix,
-                    mod_real=mod_real,
-                    canny_low=canny_low,
-                    canny_high=canny_high,
-                    metoda=metoda,
-                    kmeans_k=kmeans_k,
-                    alb_prag=alb_prag,
-                    culoare_contur_global=culoare_contur_bgr,
-                    arata_cultura=arata_cultura,
-                    masca_compas=masca_compas,
-                    masca_minimap=masca_minimap,
-                    masca_text_ui=masca_text_ui,
-                )
+            with st.spinner("Detectez contururi... (Gradient Avansat poate dura 5-15s)"):
+                if metoda == "gradient":
+                    img_rez, parcele_detectate, mask_grad = detecteaza_gradient_advanced(
+                        img_src, scala_m_per_px,
+                        aria_min_px=aria_min_px,
+                        id_fermier_prefix=id_prefix,
+                        masca_compas=masca_compas,
+                        masca_minimap=masca_minimap,
+                        masca_text_ui=masca_text_ui,
+                        aspect_max=aspect_max,
+                        culoare_contur=culoare_contur_bgr,
+                        arata_cultura=arata_cultura,
+                    )
+                    st.session_state["mask_gradient"] = mask_grad
+                else:
+                    img_rez, parcele_detectate = analizeaza_contururi(
+                        img_src, scala_m_per_px, aria_min_px, id_prefix,
+                        mod_real=mod_real,
+                        canny_low=canny_low,
+                        canny_high=canny_high,
+                        metoda=metoda,
+                        kmeans_k=kmeans_k,
+                        alb_prag=alb_prag,
+                        culoare_contur_global=culoare_contur_bgr,
+                        arata_cultura=arata_cultura,
+                        masca_compas=masca_compas,
+                        masca_minimap=masca_minimap,
+                        masca_text_ui=masca_text_ui,
+                    )
             st.session_state["img_rezultat"]       = img_rez
             st.session_state["parcele_detectate"]  = parcele_detectate
             st.session_state["scala_m_per_px"]     = scala_m_per_px
@@ -853,13 +1021,26 @@ with tab2:
         )
 
         # Intermediare diagnostice
-        _metoda_f = st.session_state.get("metoda_folosita", "masca")
+        _metoda_f = st.session_state.get("metoda_folosita", "gradient")
         with st.expander("Imagini intermediare pipeline"):
             gray_d = cv2.cvtColor(img_src, cv2.COLOR_BGR2GRAY)
             c_low  = st.session_state.get("canny_low",  30)
             c_high = st.session_state.get("canny_high", 150)
 
-            if _metoda_f == "canny":
+            if _metoda_f == "gradient":
+                mask_g = st.session_state.get("mask_gradient")
+                if mask_g is not None:
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.image(img_src[:,:,::-1], caption="Original",
+                                 use_container_width=True)
+                    with c2:
+                        st.image(mask_g, caption="Regiuni detectate (alb = parcela)",
+                                 use_container_width=True)
+                else:
+                    st.info("Ruleaza detectia mai intai.")
+
+            elif _metoda_f == "canny":
                 blur_d  = cv2.GaussianBlur(gray_d, (5, 5), 0)
                 edges_d = cv2.Canny(blur_d, c_low, c_high)
                 kd_ = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
