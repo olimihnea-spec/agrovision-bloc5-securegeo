@@ -225,11 +225,14 @@ def centru_contur(contur) -> tuple[int, int]:
 
 
 def inscrie_text_parcela(img: np.ndarray, contur, info: dict,
-                          culoare_contur=(0, 255, 0),
-                          grosime_contur=2) -> np.ndarray:
+                          culoare_contur=(255, 255, 255),
+                          grosime_contur=3,
+                          arata_cultura: bool = False) -> np.ndarray:
     """
-    Deseneaza conturul + inscrie aria, perimetrul, ID si cultura
-    in interiorul parcelei.
+    Stil Google Earth:
+    - Contur alb (sau culoarea aleasa), gros
+    - Text alb cu outline negru, fara fundal opac
+    - Format: "79,407 sq m\\n1,206 m"
     """
     rezultat = img.copy()
     cv2.drawContours(rezultat, [contur], -1, culoare_contur, grosime_contur)
@@ -237,46 +240,57 @@ def inscrie_text_parcela(img: np.ndarray, contur, info: dict,
     cx, cy = centru_contur(contur)
     h_img, w_img = rezultat.shape[:2]
 
-    # Linii de text
+    # Format Google Earth: "79,407 sq m" + "1,206 m"
+    aria_m2 = info.get("aria_m2", int(info["aria_ha"] * 10_000))
+    perim_m = int(info["perim_m"])
     linii = [
-        f"ID: {info['id']}",
-        f"Cultura: {info['cultura']}",
-        f"Aria: {info['aria_ha']:.3f} ha",
-        f"Perim: {info['perim_m']:.1f} m",
+        f"{aria_m2:,} sq m",
+        f"{perim_m:,} m",
     ]
+    if arata_cultura and info.get("cultura", "Necunoscuta") != "Necunoscuta":
+        linii.append(info["cultura"])
 
     font       = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.45
+    font_scale = 0.55
     grosime    = 1
-    padding    = 3
-    line_h     = 18
+    line_h     = 22
 
-    # Calculeaza dimensiunile totale bloc text
+    # Calculeaza latimea maxima pentru centrare
     largimi = [cv2.getTextSize(l, font, font_scale, grosime)[0][0] for l in linii]
-    max_w = max(largimi) + padding * 2
-    total_h = line_h * len(linii) + padding * 2
+    total_h = line_h * len(linii)
 
-    # Pozitioneaza blocul centrat pe centrul conturului
-    x0 = max(0, min(cx - max_w // 2, w_img - max_w))
-    y0 = max(0, min(cy - total_h // 2, h_img - total_h))
+    # Pozitie centrata pe centrul conturului
+    y_start = cy - total_h // 2
 
-    # Fundal semi-transparent
-    overlay = rezultat.copy()
-    cv2.rectangle(overlay, (x0 - 2, y0 - 2),
-                  (x0 + max_w + 2, y0 + total_h + 2), (0, 0, 0), -1)
-    cv2.addWeighted(overlay, 0.6, rezultat, 0.4, 0, rezultat)
-
-    # Scrie textul linie cu linie
-    culori_linii = [(100, 255, 255), (100, 255, 100), (255, 220, 100), (180, 180, 255)]
     for i, linie in enumerate(linii):
-        y_text = y0 + padding + (i + 1) * line_h
-        culoare_text = culori_linii[i] if i < len(culori_linii) else (255, 255, 255)
-        cv2.putText(rezultat, linie, (x0 + padding, y_text),
-                    font, font_scale, (0, 0, 0), grosime + 1, cv2.LINE_AA)
-        cv2.putText(rezultat, linie, (x0 + padding, y_text),
-                    font, font_scale, culoare_text, grosime, cv2.LINE_AA)
+        tx = cx - largimi[i] // 2
+        ty = y_start + (i + 1) * line_h
+        # Clipeaza la marginile imaginii
+        tx = max(4, min(tx, w_img - largimi[i] - 4))
+        ty = max(line_h, min(ty, h_img - 4))
+        # Outline negru (stroke gros)
+        cv2.putText(rezultat, linie, (tx, ty),
+                    font, font_scale, (0, 0, 0), grosime + 2, cv2.LINE_AA)
+        # Text alb deasupra
+        cv2.putText(rezultat, linie, (tx, ty),
+                    font, font_scale, (255, 255, 255), grosime, cv2.LINE_AA)
 
     return rezultat
+
+
+def segmenteaza_kmeans(img_bgr: np.ndarray, k: int = 6) -> np.ndarray:
+    """
+    Segmenteaza imaginea in k regiuni de culoare similara (K-means).
+    Returneaza imaginea segmentata BGR.
+    """
+    h, w = img_bgr.shape[:2]
+    pixels = img_bgr.reshape(-1, 3).astype(np.float32)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    _, labels, centers = cv2.kmeans(
+        pixels, k, None, criteria, 5, cv2.KMEANS_RANDOM_CENTERS
+    )
+    segmentat = centers[labels.flatten()].reshape(h, w, 3).astype(np.uint8)
+    return segmentat
 
 
 def analizeaza_contururi(img_bgr: np.ndarray,
@@ -284,39 +298,47 @@ def analizeaza_contururi(img_bgr: np.ndarray,
                           aria_min_px: int = 2000,
                           id_fermier_prefix: str = "APIA-GJ",
                           mod_real: bool = False,
-                          canny_low: int = 20,
-                          canny_high: int = 80) -> tuple:
+                          canny_low: int = 30,
+                          canny_high: int = 150,
+                          metoda: str = "canny",
+                          kmeans_k: int = 6,
+                          culoare_contur_global=(255, 255, 255),
+                          arata_cultura: bool = False) -> tuple:
     """
     Pipeline complet detectie contururi.
 
-    mod_real=False (imagine sintetica):
-      - Masca non-negra (borduri negre clare intre parcele)
-      - Morfologie Close+Open
-
-    mod_real=True (imagine reala drone/avion/satelit):
-      - Canny edge detection pe grayscale blur
-      - Dilatare muchii → interior parcelelor devine alb
-      - Morfologie Close+Open pentru curatare
-      - Detectie culturi pe HSV
+    metoda="masca"  — masca non-negra (imagine sintetica, borduri negre)
+    metoda="canny"  — Canny edge detection (imagini reale cu linii vizibile)
+    metoda="kmeans" — K-means color segmentation (imagini reale fara linii)
     """
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
 
-    if mod_real:
-        # Pipeline imagini reale
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        edges = cv2.Canny(blur, canny_low, canny_high)
-        # Dilateaza muchiile ca sa inchida contururile parcelelor
+    if metoda == "canny":
+        blur   = cv2.GaussianBlur(gray, (5, 5), 0)
+        edges  = cv2.Canny(blur, canny_low, canny_high)
         kernel_d = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        dilated = cv2.dilate(edges, kernel_d, iterations=3)
+        dilated  = cv2.dilate(edges, kernel_d, iterations=3)
         # Inversam: interiorul parcelei devine alb
-        filled = cv2.bitwise_not(dilated)
-        # Morfologie: Close inchide gauri, Open elimina zgomot
+        filled   = cv2.bitwise_not(dilated)
         kernel_c = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
         kernel_o = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
-        thresh_clean = cv2.morphologyEx(filled, cv2.MORPH_CLOSE, kernel_c)
-        thresh_clean = cv2.morphologyEx(thresh_clean, cv2.MORPH_OPEN, kernel_o)
-    else:
-        # Pipeline imagine sintetica — masca non-negra
+        thresh_clean = cv2.morphologyEx(filled,       cv2.MORPH_CLOSE, kernel_c)
+        thresh_clean = cv2.morphologyEx(thresh_clean, cv2.MORPH_OPEN,  kernel_o)
+
+    elif metoda == "kmeans":
+        # Segmenteaza in k culori, aplica Canny pe imaginea segmentata
+        segm = segmenteaza_kmeans(img_bgr, k=kmeans_k)
+        gray_s = cv2.cvtColor(segm, cv2.COLOR_BGR2GRAY)
+        edges  = cv2.Canny(gray_s, 10, 50)
+        kernel_d = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        dilated  = cv2.dilate(edges, kernel_d, iterations=2)
+        filled   = cv2.bitwise_not(dilated)
+        kernel_c = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 20))
+        kernel_o = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+        thresh_clean = cv2.morphologyEx(filled,       cv2.MORPH_CLOSE, kernel_c)
+        thresh_clean = cv2.morphologyEx(thresh_clean, cv2.MORPH_OPEN,  kernel_o)
+
+    else:  # "masca" — imagine sintetica
         mask = np.any(img_bgr > 25, axis=2).astype(np.uint8) * 255
         kernel_c = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
         kernel_o = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
@@ -329,12 +351,6 @@ def analizeaza_contururi(img_bgr: np.ndarray,
     parcele = []
     nr_parcela = 1
 
-    # Paleta culori pentru contururi diferite
-    culori_contur = [
-        (0, 255, 0), (0, 200, 255), (255, 100, 0),
-        (200, 0, 255), (0, 255, 200), (255, 200, 0)
-    ]
-
     for contur in contururi:
         aria_px = cv2.contourArea(contur)
         if aria_px < aria_min_px:
@@ -342,12 +358,13 @@ def analizeaza_contururi(img_bgr: np.ndarray,
 
         perim_px = cv2.arcLength(contur, True)
         aria_ha  = pixeli_la_hectare(aria_px, scala_m_per_px)
+        aria_m2  = int(aria_px * (scala_m_per_px ** 2))
         perim_m  = pixeli_la_metri(perim_px, scala_m_per_px)
 
         # Detectie cultura din culoarea ROI
-        x, y, w, h = cv2.boundingRect(contur)
-        roi = img_bgr[y:y+h, x:x+w]
-        if mod_real:
+        x_b, y_b, w_b, h_b = cv2.boundingRect(contur)
+        roi = img_bgr[y_b:y_b+h_b, x_b:x_b+w_b]
+        if mod_real or metoda in ("canny", "kmeans"):
             cultura = detecteaza_cultura_hsv(roi)
         else:
             cultura = detecteaza_cultura_din_culoare(roi)
@@ -364,6 +381,7 @@ def analizeaza_contururi(img_bgr: np.ndarray,
             "id":       id_parcela,
             "cultura":  cultura,
             "aria_ha":  round(aria_ha, 4),
+            "aria_m2":  aria_m2,
             "aria_px":  int(aria_px),
             "perim_m":  round(perim_m, 2),
             "perim_px": round(perim_px, 1),
@@ -371,9 +389,12 @@ def analizeaza_contururi(img_bgr: np.ndarray,
             "nr":       nr_parcela,
         }
 
-        culoare = culori_contur[(nr_parcela - 1) % len(culori_contur)]
-        img_rezultat = inscrie_text_parcela(img_rezultat, contur, info,
-                                            culoare_contur=culoare)
+        img_rezultat = inscrie_text_parcela(
+            img_rezultat, contur, info,
+            culoare_contur=culoare_contur_global,
+            grosime_contur=3,
+            arata_cultura=arata_cultura,
+        )
         parcele.append(info)
         nr_parcela += 1
 
@@ -543,29 +564,56 @@ with tab2:
             st.metric("Scala activa", f"{scala_m_per_px} m/px")
 
         st.divider()
-        # Mod automat: imagine reala daca e uploadata
-        mod_real_auto = uploaded is not None
-        mod_real = st.checkbox(
-            "Mod imagine reala (Canny edge detection)",
-            value=mod_real_auto,
-            help="Activat automat cand incarci o imagine proprie. "
-                 "Foloseste detectie Canny in loc de masca non-negru.",
-            key="mod_real"
+        st.markdown("**Metoda detectie:**")
+        # Auto-selecteaza metoda
+        metoda_default = "Canny (imagine cu linii vizibile)" if uploaded is not None else "Masca non-negru (imagine sintetica)"
+        metoda_aleasa = st.selectbox(
+            "Algoritm segmentare:",
+            [
+                "Canny (imagine cu linii vizibile)",
+                "K-means (imagine fara linii — segmentare culori)",
+                "Masca non-negru (imagine sintetica)",
+            ],
+            index=0 if uploaded is not None else 2,
+            key="metoda_seg"
         )
+        metoda_map = {
+            "Canny (imagine cu linii vizibile)": "canny",
+            "K-means (imagine fara linii — segmentare culori)": "kmeans",
+            "Masca non-negru (imagine sintetica)": "masca",
+        }
+        metoda = metoda_map[metoda_aleasa]
+        mod_real = metoda != "masca"
 
-        if mod_real:
-            st.markdown("**Parametri Canny (ajusteaza daca contururile lipsesc):**")
-            canny_low  = st.slider("Prag Canny minim:", 5, 100,  20, 5, key="canny_low")
-            canny_high = st.slider("Prag Canny maxim:", 20, 300, 80, 10, key="canny_high")
+        if metoda == "canny":
+            st.markdown("**Parametri Canny:**")
+            canny_low  = st.slider("Prag minim:", 5, 100,  30, 5,  key="canny_low")
+            canny_high = st.slider("Prag maxim:", 30, 300, 150, 10, key="canny_high")
         else:
-            canny_low, canny_high = 20, 80
+            canny_low, canny_high = 30, 150
+
+        kmeans_k = 6
+        if metoda == "kmeans":
+            kmeans_k = st.slider("Nr. culori K-means:", 3, 12, 6, 1, key="kmeans_k")
+
+        st.divider()
+        st.markdown("**Afisare contururi:**")
+        culoare_contur_hex = st.color_picker(
+            "Culoare contur:", "#FFFFFF", key="culoare_contur"
+        )
+        # Converteste hex → BGR
+        h_col = culoare_contur_hex.lstrip("#")
+        r, g, b = int(h_col[0:2], 16), int(h_col[2:4], 16), int(h_col[4:6], 16)
+        culoare_contur_bgr = (b, g, r)
+
+        arata_cultura = st.checkbox("Afiseaza cultura pe parcela", value=False, key="arata_cult")
 
         st.divider()
         st.markdown("**Filtrare contururi:**")
         aria_min_px = st.slider(
             "Arie minima (pixeli):",
-            min_value=100, max_value=20000, value=3000, step=100,
-            help="Contururi mai mici decat aceasta valoare sunt ignorate (zgomot)",
+            min_value=100, max_value=50000, value=3000, step=500,
+            help="Contururi mai mici sunt ignorate (zgomot)",
             key="aria_min"
         )
 
@@ -601,11 +649,18 @@ with tab2:
                     mod_real=mod_real,
                     canny_low=canny_low,
                     canny_high=canny_high,
+                    metoda=metoda,
+                    kmeans_k=kmeans_k,
+                    culoare_contur_global=culoare_contur_bgr,
+                    arata_cultura=arata_cultura,
                 )
-            st.session_state["img_rezultat"]      = img_rez
-            st.session_state["parcele_detectate"] = parcele_detectate
-            st.session_state["scala_m_per_px"]    = scala_m_per_px
-            st.session_state["mod_real_folosit"]  = mod_real
+            st.session_state["img_rezultat"]       = img_rez
+            st.session_state["parcele_detectate"]  = parcele_detectate
+            st.session_state["scala_m_per_px"]     = scala_m_per_px
+            st.session_state["mod_real_folosit"]   = mod_real
+            st.session_state["metoda_folosita"]    = metoda
+            st.session_state["canny_low"]          = canny_low
+            st.session_state["canny_high"]         = canny_high
 
     # Afiseaza rezultatul sub cele doua coloane
     if ruleaza and "img_rezultat" in st.session_state:
@@ -630,19 +685,20 @@ with tab2:
         )
 
         # Intermediare diagnostice
-        _mod_real_f = st.session_state.get("mod_real_folosit", False)
+        _metoda_f = st.session_state.get("metoda_folosita", "masca")
         with st.expander("Imagini intermediare pipeline"):
             gray_d = cv2.cvtColor(img_src, cv2.COLOR_BGR2GRAY)
-            if _mod_real_f:
+            c_low  = st.session_state.get("canny_low",  30)
+            c_high = st.session_state.get("canny_high", 150)
+
+            if _metoda_f == "canny":
                 blur_d  = cv2.GaussianBlur(gray_d, (5, 5), 0)
-                edges_d = cv2.Canny(blur_d,
-                                    st.session_state.get("canny_low",  20),
-                                    st.session_state.get("canny_high", 80))
+                edges_d = cv2.Canny(blur_d, c_low, c_high)
                 kd_ = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-                dil_d = cv2.dilate(edges_d, kd_, iterations=3)
+                dil_d  = cv2.dilate(edges_d, kd_, iterations=3)
                 fill_d = cv2.bitwise_not(dil_d)
-                k_c_ = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
-                k_o_ = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+                k_c_   = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+                k_o_   = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
                 close_ = cv2.morphologyEx(fill_d, cv2.MORPH_CLOSE, k_c_)
                 open_  = cv2.morphologyEx(close_, cv2.MORPH_OPEN,  k_o_)
                 viz_cnt = np.ones_like(img_src) * 255
@@ -653,11 +709,41 @@ with tab2:
                 with c1:
                     st.image(edges_d, caption="Canny edges", use_container_width=True)
                 with c2:
-                    st.image(dil_d,   caption="Dilatare muchii", use_container_width=True)
+                    st.image(dil_d,   caption="Dilatare + Invert", use_container_width=True)
                 with c3:
                     st.image(open_,   caption="Close+Open", use_container_width=True)
                 with c4:
                     st.image(viz_cnt, caption="Contururi gasite", use_container_width=True)
+
+            elif _metoda_f == "kmeans":
+                segm_d = segmenteaza_kmeans(img_src, k=6)
+                gray_s = cv2.cvtColor(segm_d, cv2.COLOR_BGR2GRAY)
+                edges_s = cv2.Canny(gray_s, 10, 50)
+                kd_ = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                dil_s  = cv2.dilate(edges_s, kd_, iterations=2)
+                fill_s = cv2.bitwise_not(dil_s)
+                k_c_   = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 20))
+                k_o_   = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+                open_s = cv2.morphologyEx(
+                    cv2.morphologyEx(fill_s, cv2.MORPH_CLOSE, k_c_),
+                    cv2.MORPH_OPEN, k_o_
+                )
+                viz_cnt = np.ones_like(img_src) * 255
+                cnts_viz, _ = cv2.findContours(open_s, cv2.RETR_EXTERNAL,
+                                               cv2.CHAIN_APPROX_SIMPLE)
+                cv2.drawContours(viz_cnt, cnts_viz, -1, (0, 0, 255), 2)
+                c1, c2, c3, c4 = st.columns(4)
+                with c1:
+                    st.image(segm_d[:,:,::-1], caption="K-means segmentat",
+                             use_container_width=True)
+                with c2:
+                    st.image(edges_s, caption="Canny pe segmentat",
+                             use_container_width=True)
+                with c3:
+                    st.image(open_s,  caption="Close+Open", use_container_width=True)
+                with c4:
+                    st.image(viz_cnt, caption="Contururi gasite", use_container_width=True)
+
             else:
                 mask_   = np.any(img_src > 25, axis=2).astype(np.uint8) * 255
                 k_c_ = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
@@ -695,13 +781,14 @@ with tab3:
 
         import pandas as pd
         df = pd.DataFrame([{
-            "Nr.":        p["nr"],
-            "ID Parcela": p["id"],
-            "Cultura":    p["cultura"],
-            "Aria (ha)":  p["aria_ha"],
-            "Perim. (m)": p["perim_m"],
-            "Aria (px²)": p["aria_px"],
-            "Centru":     f"({p['centru'][0]}, {p['centru'][1]})",
+            "Nr.":         p["nr"],
+            "ID Parcela":  p["id"],
+            "Cultura":     p["cultura"],
+            "Aria (sq m)": f"{p.get('aria_m2', int(p['aria_ha']*10000)):,}",
+            "Aria (ha)":   p["aria_ha"],
+            "Perim. (m)":  f"{int(p['perim_m']):,}",
+            "Aria (px²)":  p["aria_px"],
+            "Centru":      f"({p['centru'][0]}, {p['centru'][1]})",
         } for p in parcele])
 
         st.dataframe(df, use_container_width=True, hide_index=True)
