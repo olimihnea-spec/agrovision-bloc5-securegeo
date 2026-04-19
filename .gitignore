@@ -11,8 +11,7 @@ __pycache__/
 *.pyo
 .streamlit/secrets.toml
 
-# Modele mari
-*.pt
+# Modele mari (yolov8n.pt este inclus - necesar pentru pagina 07)
 *.pth
 *.h5
 *.pkl
