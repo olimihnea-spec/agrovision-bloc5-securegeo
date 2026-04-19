@@ -485,10 +485,19 @@ The AGRI-GEO Security Framework was developed inductively from the empirical
 findings of this study, using a requirements engineering approach informed by:
 (i) the identified performance and compliance gaps in evaluated applications;
 (ii) the operational requirements of APIA field inspectors (20+ years institutional
-experience of the lead author);
-(iii) the technical architecture of the SecureGeo system prototype developed in
-parallel within the Bloc 5 AI Aplicat educational platform at UCB Târgu Jiu;
-(iv) alignment with ACE²-EU Alliance research priorities and anticipated Horizon
+experience of the lead author, including direct responsibility for georeferenced
+inspection data quality and LPIS compliance since APIA Gorj's establishment);
+(iii) the lead author's experience in critical infrastructure protection and
+emergency management since 2015, as a member of the Emergency Situations
+Assessment Commission for Natural Disasters within the Gorj Prefecture
+(Ordinul Prefectului Gorj nr. 154/17.03.2025), providing direct operational
+knowledge of the cybersecurity and data integrity requirements applicable to
+critical public administration systems under crisis conditions;
+(iv) the technical architecture of the SecureGeo system prototype developed in
+parallel within the Bloc 5 AI Aplicat educational platform at UCB Târgu Jiu,
+publicly accessible for independent testing and validation at:
+https://georeferencing-applications.streamlit.app/10b_SecureGeo_Platform;
+(v) alignment with ACE²-EU Alliance research priorities and anticipated Horizon
 Europe and Digital Europe Programme calls post-August 2026.
 
 The framework specifies five mandatory criteria and one recommended criterion for
@@ -872,10 +881,18 @@ drone monitoring scenarios.
 This architecture directly addresses the ACE²-EU call for secure infrastructure
 solutions combining artificial intelligence, cybersecurity mechanisms, and digital
 sovereignty principles for the protection of EU agricultural data and critical
-infrastructures. The prototype implementation, demonstrated within the AgroVision
-Streamlit application platform (publicly accessible at Streamlit Cloud, 24/7
-availability confirmed), validates the technical feasibility of the proposed
-approach on commodity hardware and open-source software frameworks.
+infrastructures. The prototype implementation is publicly accessible for independent
+testing and validation at:
+
+**SecureGeo Platform (online, 24/7):**
+https://georeferencing-applications.streamlit.app/10b_SecureGeo_Platform
+
+The platform allows users to: (i) visualize the real flight GPS tracks and altitude
+profile; (ii) explore the GDPR Compliance Score simulator; (iii) generate
+AES-256-encrypted ZIP packages with SHA-256 integrity hashes; and (iv) export
+GeoJSON, GPX 1.1, and CSV formats for QGIS and GPX Viewer. This open-source,
+commodity-hardware implementation validates the technical feasibility of the
+proposed AGRI-GEO-compliant architecture.
 
 ### 4.7 Alignment with EU Funding Landscape Post-2026
 
@@ -972,11 +989,20 @@ The principal findings are as follows:
 The SecureGeo architecture demonstrated in this study—combining AES-256-GCM
 encryption, real-time outlier detection, and tri-format export (GeoJSON, GPX,
 CSV)—represents a technically feasible, open-source implementation path for
-achieving full AGRI-GEO compliance on commodity Android hardware. This approach
-directly addresses the ACE²-EU Alliance's research agenda on cybersecurity,
-digital sovereignty, and critical infrastructure protection, and is positioned
-to contribute to EU funding calls in these domains after August 2026 under
-Horizon Europe Cluster 3 and the Digital Europe Programme.
+achieving full AGRI-GEO compliance on commodity Android hardware. A fully
+functional prototype is available for public testing at
+https://georeferencing-applications.streamlit.app/10b_SecureGeo_Platform
+(24/7 availability, no registration required), enabling independent validation
+of the findings reported in this study. This approach directly addresses the
+ACE²-EU Alliance's research agenda on cybersecurity, digital sovereignty, and
+critical infrastructure protection, and is positioned to contribute to EU
+funding calls in these domains after August 2026 under Horizon Europe Cluster 3
+and the Digital Europe Programme. The operational context of this research is
+further strengthened by the lead author's involvement in emergency infrastructure
+protection since 2015, including membership in the Emergency Situations Assessment
+Commission for Natural Disasters at the Gorj Prefecture level—experience that
+directly informs the practical security requirements articulated in the
+AGRI-GEO Security Framework.
 
 Future research should replicate this evaluation protocol across multiple device
 models and GNSS chipsets, extend the GDPR assessment with formal legal review,
