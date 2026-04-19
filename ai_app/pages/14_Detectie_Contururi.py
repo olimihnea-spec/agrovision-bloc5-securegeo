@@ -300,25 +300,60 @@ def analizeaza_contururi(img_bgr: np.ndarray,
                           mod_real: bool = False,
                           canny_low: int = 30,
                           canny_high: int = 150,
-                          metoda: str = "canny",
+                          metoda: str = "hsv",
                           kmeans_k: int = 6,
+                          alb_prag: int = 180,
                           culoare_contur_global=(255, 255, 255),
-                          arata_cultura: bool = False) -> tuple:
+                          arata_cultura: bool = False,
+                          masca_compas: bool = True,
+                          masca_minimap: bool = True,
+                          masca_text_ui: bool = True) -> tuple:
     """
     Pipeline complet detectie contururi.
 
-    metoda="masca"  — masca non-negra (imagine sintetica, borduri negre)
-    metoda="canny"  — Canny edge detection (imagini reale cu linii vizibile)
-    metoda="kmeans" — K-means color segmentation (imagini reale fara linii)
+    metoda="hsv"        — segmentare HSV vegetatie/sol/padure (RECOMANDAT imagini reale)
+    metoda="linii_albe" — prag pixeli albi (Google Earth / QGIS cu linii trasate)
+    metoda="canny"      — Canny edge detection
+    metoda="kmeans"     — K-means color segmentation
+    metoda="masca"      — masca non-negra (imagine sintetica, borduri negre)
     """
+    h_img, w_img = img_bgr.shape[:2]
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
 
-    if metoda == "canny":
+    if metoda == "hsv":
+        # Segmentare HSV vegetatie/sol/padure — algoritm specializat imagini agricole
+        thresh_clean = segmenteaza_hsv_agricol(
+            img_bgr,
+            masca_compas=masca_compas,
+            masca_minimap=masca_minimap,
+            masca_text=masca_text_ui,
+        )
+
+    elif metoda == "linii_albe":
+        # Detecteaza pixeli albi/deschisi = liniile trasate (Google Earth, QGIS)
+        # inRange: toti cei 3 canali BGR > alb_prag → linia este detectata
+        lower = np.array([alb_prag, alb_prag, alb_prag], dtype=np.uint8)
+        upper = np.array([255, 255, 255], dtype=np.uint8)
+        white_mask = cv2.inRange(img_bgr, lower, upper)
+        # Dilateaza liniile ca sa inchida micile intreruperi
+        kernel_d = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+        dilated  = cv2.dilate(white_mask, kernel_d, iterations=2)
+        # Inversam: interiorul parcelei devine alb
+        filled   = cv2.bitwise_not(dilated)
+        # Close: inchide gauri mici din interior
+        # Open: elimina zgomot mic (text labels etc.)
+        kc_sz = max(9, h_img // 80)
+        ko_sz = max(5, h_img // 120)
+        kernel_c = cv2.getStructuringElement(cv2.MORPH_RECT, (kc_sz, kc_sz))
+        kernel_o = cv2.getStructuringElement(cv2.MORPH_RECT, (ko_sz, ko_sz))
+        thresh_clean = cv2.morphologyEx(filled,       cv2.MORPH_CLOSE, kernel_c)
+        thresh_clean = cv2.morphologyEx(thresh_clean, cv2.MORPH_OPEN,  kernel_o)
+
+    elif metoda == "canny":
         blur   = cv2.GaussianBlur(gray, (5, 5), 0)
         edges  = cv2.Canny(blur, canny_low, canny_high)
         kernel_d = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         dilated  = cv2.dilate(edges, kernel_d, iterations=3)
-        # Inversam: interiorul parcelei devine alb
         filled   = cv2.bitwise_not(dilated)
         kernel_c = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
         kernel_o = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
@@ -326,7 +361,6 @@ def analizeaza_contururi(img_bgr: np.ndarray,
         thresh_clean = cv2.morphologyEx(thresh_clean, cv2.MORPH_OPEN,  kernel_o)
 
     elif metoda == "kmeans":
-        # Segmenteaza in k culori, aplica Canny pe imaginea segmentata
         segm = segmenteaza_kmeans(img_bgr, k=kmeans_k)
         gray_s = cv2.cvtColor(segm, cv2.COLOR_BGR2GRAY)
         edges  = cv2.Canny(gray_s, 10, 50)
@@ -338,7 +372,7 @@ def analizeaza_contururi(img_bgr: np.ndarray,
         thresh_clean = cv2.morphologyEx(filled,       cv2.MORPH_CLOSE, kernel_c)
         thresh_clean = cv2.morphologyEx(thresh_clean, cv2.MORPH_OPEN,  kernel_o)
 
-    else:  # "masca" — imagine sintetica
+    else:  # "masca" — imagine sintetica cu borduri negre
         mask = np.any(img_bgr > 25, axis=2).astype(np.uint8) * 255
         kernel_c = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
         kernel_o = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
@@ -350,11 +384,15 @@ def analizeaza_contururi(img_bgr: np.ndarray,
     img_rezultat = img_bgr.copy()
     parcele = []
     nr_parcela = 1
+    aria_totala_img = h_img * w_img
 
     for contur in contururi:
         aria_px = cv2.contourArea(contur)
+        # Ignora contururi mici (zgomot) si conturul intregii imagini
         if aria_px < aria_min_px:
             continue
+        if aria_px > aria_totala_img * 0.90:
+            continue  # conturul imaginii intregi — ignorat
 
         perim_px = cv2.arcLength(contur, True)
         aria_ha  = pixeli_la_hectare(aria_px, scala_m_per_px)
@@ -364,7 +402,7 @@ def analizeaza_contururi(img_bgr: np.ndarray,
         # Detectie cultura din culoarea ROI
         x_b, y_b, w_b, h_b = cv2.boundingRect(contur)
         roi = img_bgr[y_b:y_b+h_b, x_b:x_b+w_b]
-        if mod_real or metoda in ("canny", "kmeans"):
+        if mod_real or metoda in ("canny", "kmeans", "linii_albe"):
             cultura = detecteaza_cultura_hsv(roi)
         else:
             cultura = detecteaza_cultura_din_culoare(roi)
@@ -399,6 +437,63 @@ def analizeaza_contururi(img_bgr: np.ndarray,
         nr_parcela += 1
 
     return img_rezultat, parcele
+
+
+def segmenteaza_hsv_agricol(img_bgr: np.ndarray,
+                              masca_compas: bool = True,
+                              masca_minimap: bool = True,
+                              masca_text: bool = True) -> np.ndarray:
+    """
+    Segmentare HSV pentru imagini agricole aeriene (Google Earth / avion / satelit).
+    Detecteaza: vegetatie verde, sol/brun, padure, exclude drumuri deschise.
+    Mascheaza zonele UI: compas stg-sus, mini-harta stg-jos, text alb.
+    Returneaza masca binara 0/255 cu zonele agricole.
+    """
+    h, w = img_bgr.shape[:2]
+
+    # Masca valida: 1 = zone de analizat, 0 = UI overlay de ignorat
+    mask_valid = np.ones((h, w), dtype=np.uint8) * 255
+    if masca_compas:
+        cx_sz = int(w * 0.22)
+        cy_sz = int(h * 0.30)
+        cv2.rectangle(mask_valid, (0, 0), (cx_sz, cy_sz), 0, -1)
+    if masca_minimap:
+        mx_sz = int(w * 0.32)
+        my_sz = int(h * 0.35)
+        cv2.rectangle(mask_valid, (0, h - my_sz), (mx_sz, h), 0, -1)
+    if masca_text:
+        tx_sz = int(w * 0.55)
+        ty_sz = int(h * 0.45)
+        cv2.rectangle(mask_valid, (w - tx_sz, h - ty_sz), (w, h), 0, -1)
+
+    # Aplica masca
+    img_m = cv2.bitwise_and(img_bgr, img_bgr, mask=mask_valid)
+
+    # Blur + HSV
+    blur = cv2.GaussianBlur(img_m, (7, 7), 0)
+    hsv  = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
+
+    # Vegetatie verde
+    mask_verde  = cv2.inRange(hsv, np.array([30, 20, 30]),   np.array([95, 255, 255]))
+    # Sol / brun
+    mask_sol    = cv2.inRange(hsv, np.array([5,  20, 20]),   np.array([25, 255, 220]))
+    # Padure / vegetatie inchisa
+    mask_padure = cv2.inRange(hsv, np.array([20, 10, 10]),   np.array([80, 180, 120]))
+    # Drumuri / zone deschise luminoase — de EXCLUS
+    mask_drum   = cv2.inRange(hsv, np.array([0,   0, 120]),  np.array([180, 80, 255]))
+
+    # Combina zone agricole si exclude drumuri
+    mask_agricol = cv2.bitwise_or(mask_verde, mask_sol)
+    mask_agricol = cv2.bitwise_or(mask_agricol, mask_padure)
+    mask_agricol = cv2.bitwise_and(mask_agricol, cv2.bitwise_not(mask_drum))
+    mask_agricol = cv2.bitwise_and(mask_agricol, mask_valid)
+
+    # Morfologie: Close (umple gauri), Open (elimina zgomot)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+    mask_agricol = cv2.morphologyEx(mask_agricol, cv2.MORPH_CLOSE, kernel, iterations=2)
+    mask_agricol = cv2.morphologyEx(mask_agricol, cv2.MORPH_OPEN,  kernel, iterations=1)
+
+    return mask_agricol
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -565,63 +660,62 @@ with tab2:
 
         st.divider()
         st.markdown("**Metoda detectie:**")
-        # Auto-selecteaza metoda
-        metoda_default = "Canny (imagine cu linii vizibile)" if uploaded is not None else "Masca non-negru (imagine sintetica)"
         metoda_aleasa = st.selectbox(
             "Algoritm segmentare:",
             [
-                "Canny (imagine cu linii vizibile)",
-                "K-means (imagine fara linii — segmentare culori)",
+                "HSV Vegetatie/Sol (recomandat imagini reale)",
+                "Linii albe (Google Earth / QGIS)",
+                "K-means (segmentare culori)",
+                "Canny (contraste puternice)",
                 "Masca non-negru (imagine sintetica)",
             ],
-            index=0 if uploaded is not None else 2,
+            index=0 if uploaded is not None else 4,
             key="metoda_seg"
         )
         metoda_map = {
-            "Canny (imagine cu linii vizibile)": "canny",
-            "K-means (imagine fara linii — segmentare culori)": "kmeans",
-            "Masca non-negru (imagine sintetica)": "masca",
+            "HSV Vegetatie/Sol (recomandat imagini reale)": "hsv",
+            "Linii albe (Google Earth / QGIS)":             "linii_albe",
+            "K-means (segmentare culori)":                  "kmeans",
+            "Canny (contraste puternice)":                  "canny",
+            "Masca non-negru (imagine sintetica)":          "masca",
         }
-        metoda = metoda_map[metoda_aleasa]
+        metoda  = metoda_map[metoda_aleasa]
         mod_real = metoda != "masca"
 
-        if metoda == "canny":
-            st.markdown("**Parametri Canny:**")
-            canny_low  = st.slider("Prag minim:", 5, 100,  30, 5,  key="canny_low")
-            canny_high = st.slider("Prag maxim:", 30, 300, 150, 10, key="canny_high")
-        else:
-            canny_low, canny_high = 30, 150
+        # Parametri specifici metodei
+        canny_low, canny_high, kmeans_k, alb_prag = 30, 150, 6, 180
+        masca_compas = masca_minimap = masca_text_ui = False
 
-        kmeans_k = 6
-        if metoda == "kmeans":
+        if metoda == "hsv":
+            st.markdown("**Mascheaza UI Google Earth:**")
+            masca_compas  = st.checkbox("Compas (stanga sus)",   value=True, key="m_compas")
+            masca_minimap = st.checkbox("Mini-harta (stanga jos)", value=True, key="m_mini")
+            masca_text_ui = st.checkbox("Text / logo (dreapta jos)", value=True, key="m_text")
+        elif metoda == "linii_albe":
+            alb_prag = st.slider("Prag alb (pixeli ≥):", 140, 240, 180, 5, key="alb_prag")
+        elif metoda == "canny":
+            canny_low  = st.slider("Prag Canny minim:", 5, 100,  30, 5,  key="canny_low")
+            canny_high = st.slider("Prag Canny maxim:", 30, 300, 150, 10, key="canny_high")
+        elif metoda == "kmeans":
             kmeans_k = st.slider("Nr. culori K-means:", 3, 12, 6, 1, key="kmeans_k")
 
         st.divider()
         st.markdown("**Afisare contururi:**")
-        culoare_contur_hex = st.color_picker(
-            "Culoare contur:", "#FFFFFF", key="culoare_contur"
-        )
-        # Converteste hex → BGR
+        culoare_contur_hex = st.color_picker("Culoare contur:", "#FFFFFF", key="culoare_contur")
         h_col = culoare_contur_hex.lstrip("#")
-        r, g, b = int(h_col[0:2], 16), int(h_col[2:4], 16), int(h_col[4:6], 16)
-        culoare_contur_bgr = (b, g, r)
-
+        r_, g_, b_ = int(h_col[0:2], 16), int(h_col[2:4], 16), int(h_col[4:6], 16)
+        culoare_contur_bgr = (b_, g_, r_)
         arata_cultura = st.checkbox("Afiseaza cultura pe parcela", value=False, key="arata_cult")
 
         st.divider()
         st.markdown("**Filtrare contururi:**")
         aria_min_px = st.slider(
             "Arie minima (pixeli):",
-            min_value=100, max_value=50000, value=3000, step=500,
-            help="Contururi mai mici sunt ignorate (zgomot)",
+            min_value=100, max_value=50000, value=8000, step=500,
+            help="Contururi mai mici sunt ignorate",
             key="aria_min"
         )
-
-        id_prefix = st.text_input(
-            "Prefix ID fermier:",
-            value="APIA-GJ",
-            key="id_prefix"
-        )
+        id_prefix = st.text_input("Prefix ID fermier:", value="APIA-GJ", key="id_prefix")
 
         st.divider()
         ruleaza = st.button("Detecteaza Contururi", type="primary",
@@ -651,8 +745,12 @@ with tab2:
                     canny_high=canny_high,
                     metoda=metoda,
                     kmeans_k=kmeans_k,
+                    alb_prag=alb_prag,
                     culoare_contur_global=culoare_contur_bgr,
                     arata_cultura=arata_cultura,
+                    masca_compas=masca_compas,
+                    masca_minimap=masca_minimap,
+                    masca_text_ui=masca_text_ui,
                 )
             st.session_state["img_rezultat"]       = img_rez
             st.session_state["parcele_detectate"]  = parcele_detectate
