@@ -205,13 +205,55 @@ def detecteaza_cultura_hsv(roi_bgr: np.ndarray) -> str:
 
 
 def pixeli_la_hectare(aria_px: float, scala_m_per_px: float) -> float:
-    """Converteste aria in pixeli la hectare folosind scala."""
+    """Converteste aria in pixeli la hectare folosind GSD."""
     aria_m2 = aria_px * (scala_m_per_px ** 2)
     return aria_m2 / 10_000.0
 
 
 def pixeli_la_metri(lungime_px: float, scala_m_per_px: float) -> float:
     return lungime_px * scala_m_per_px
+
+
+def calculeaza_gsd(altitudine_m: float, focal_mm: float,
+                   sensor_w_mm: float, img_w_px: int) -> float:
+    """
+    Calculeaza GSD (Ground Sampling Distance) = metri / pixel.
+
+    Formula: GSD = (altitudine × sensor_w) / (focal × img_w)
+
+    Parametri tipici:
+    - Drone DJI Phantom 4: focal=8.8mm, sensor=13.2×8.8mm, 4000px → GSD@100m = 3.3 cm/px
+    - Telefon (zbor avion ~11500m): focal_eq=26mm, sensor=6.17mm, 4032px → GSD ≈ 27 m/px
+    - Satelit Sentinel-2: 10 m/px (direct)
+    """
+    if focal_mm <= 0 or sensor_w_mm <= 0 or img_w_px <= 0:
+        return 0.0
+    return (altitudine_m * sensor_w_mm) / (focal_mm * img_w_px)
+
+
+def calculeaza_metrici_exacte(contur, gsd_m_per_px: float) -> dict:
+    """
+    Calculeaza aria si perimetrul EXACT folosind OpenCV si GSD cunoscut.
+
+    - cv2.contourArea() returneaza aria EXACTA in pixeli (algoritm Shoelace/Green)
+    - cv2.arcLength() returneaza perimetrul EXACT in pixeli (suma segmente)
+    - Eroarea de conversie depinde exclusiv de acuratetea GSD-ului
+    """
+    aria_px2   = cv2.contourArea(contur)
+    perim_px   = cv2.arcLength(contur, True)
+    aria_m2    = aria_px2 * (gsd_m_per_px ** 2)
+    aria_ha    = aria_m2 / 10_000.0
+    perim_m    = perim_px * gsd_m_per_px
+    # Compactitate: 1.0 = cerc perfect, 0 = forma foarte alungita
+    compactitate = (4 * np.pi * aria_px2) / (perim_px ** 2) if perim_px > 0 else 0.0
+    return {
+        "aria_px2":     round(aria_px2, 1),
+        "perim_px":     round(perim_px, 1),
+        "aria_m2":      int(aria_m2),
+        "aria_ha":      round(aria_ha, 4),
+        "perim_m":      round(perim_m, 1),
+        "compactitate": round(compactitate, 3),
+    }
 
 
 def centru_contur(contur) -> tuple[int, int]:
@@ -394,10 +436,10 @@ def analizeaza_contururi(img_bgr: np.ndarray,
         if aria_px > aria_totala_img * 0.90:
             continue  # conturul imaginii intregi — ignorat
 
-        perim_px = cv2.arcLength(contur, True)
-        aria_ha  = pixeli_la_hectare(aria_px, scala_m_per_px)
-        aria_m2  = int(aria_px * (scala_m_per_px ** 2))
-        perim_m  = pixeli_la_metri(perim_px, scala_m_per_px)
+        metrici = calculeaza_metrici_exacte(contur, scala_m_per_px)
+        aria_ha  = metrici["aria_ha"]
+        aria_m2  = metrici["aria_m2"]
+        perim_m  = metrici["perim_m"]
 
         # Detectie cultura din culoarea ROI
         x_b, y_b, w_b, h_b = cv2.boundingRect(contur)
@@ -416,15 +458,16 @@ def analizeaza_contururi(img_bgr: np.ndarray,
         id_parcela = f"{id_fermier_prefix}-{prefix_cultura}-{nr_parcela:03d}"
 
         info = {
-            "id":       id_parcela,
-            "cultura":  cultura,
-            "aria_ha":  round(aria_ha, 4),
-            "aria_m2":  aria_m2,
-            "aria_px":  int(aria_px),
-            "perim_m":  round(perim_m, 2),
-            "perim_px": round(perim_px, 1),
-            "centru":   centru_contur(contur),
-            "nr":       nr_parcela,
+            "id":           id_parcela,
+            "cultura":      cultura,
+            "aria_ha":      metrici["aria_ha"],
+            "aria_m2":      metrici["aria_m2"],
+            "aria_px":      int(metrici["aria_px2"]),
+            "perim_m":      metrici["perim_m"],
+            "perim_px":     metrici["perim_px"],
+            "compactitate": metrici["compactitate"],
+            "centru":       centru_contur(contur),
+            "nr":           nr_parcela,
         }
 
         img_rezultat = inscrie_text_parcela(
@@ -630,33 +673,60 @@ with tab2:
             )
 
         st.divider()
-        st.markdown("**Parametri scala:**")
+        st.markdown("**Parametri scala (GSD):**")
 
-        scala_optiune = st.selectbox(
-            "Tipul scalei:",
-            ["Drone 100m altitudine (0.05 m/px)",
-             "Drone 50m altitudine (0.025 m/px)",
-             "Drone 200m altitudine (0.10 m/px)",
-             "Satelit (10 m/px)",
-             "Manual (introdu valoarea)"],
-            key="scala_opt"
+        metoda_scala = st.radio(
+            "Cum stabilesti scala:",
+            ["Preset", "Calculator GSD", "Manual"],
+            horizontal=True, key="metoda_scala"
         )
 
-        scala_map = {
-            "Drone 100m altitudine (0.05 m/px)": 0.05,
-            "Drone 50m altitudine (0.025 m/px)": 0.025,
-            "Drone 200m altitudine (0.10 m/px)": 0.10,
-            "Satelit (10 m/px)": 10.0,
-        }
-
-        if "Manual" in scala_optiune:
-            scala_m_per_px = st.number_input(
-                "Scala (metri per pixel):", min_value=0.001, max_value=100.0,
-                value=0.05, step=0.005, key="scala_manual"
+        if metoda_scala == "Preset":
+            scala_optiune = st.selectbox(
+                "Tipul scalei:",
+                ["Drone 100m altitudine (0.05 m/px)",
+                 "Drone 50m altitudine (0.025 m/px)",
+                 "Drone 200m altitudine (0.10 m/px)",
+                 "Avion 1000m (0.5 m/px)",
+                 "Avion 3000m (1.5 m/px)",
+                 "Avion 11500m (27 m/px)",
+                 "Satelit Sentinel-2 (10 m/px)"],
+                key="scala_opt"
             )
-        else:
+            scala_map = {
+                "Drone 100m altitudine (0.05 m/px)":  0.05,
+                "Drone 50m altitudine (0.025 m/px)":  0.025,
+                "Drone 200m altitudine (0.10 m/px)":  0.10,
+                "Avion 1000m (0.5 m/px)":             0.5,
+                "Avion 3000m (1.5 m/px)":             1.5,
+                "Avion 11500m (27 m/px)":             27.0,
+                "Satelit Sentinel-2 (10 m/px)":       10.0,
+            }
             scala_m_per_px = scala_map.get(scala_optiune, 0.05)
-            st.metric("Scala activa", f"{scala_m_per_px} m/px")
+            st.metric("GSD activ", f"{scala_m_per_px} m/px")
+
+        elif metoda_scala == "Calculator GSD":
+            st.markdown("""
+            <div style='font-size:11px; color:#555; background:#f0f4ff;
+                 padding:8px; border-radius:6px; margin-bottom:6px;'>
+            <b>Formula GSD:</b> (altitudine × sensor_latime) / (focal × img_latime_px)
+            </div>""", unsafe_allow_html=True)
+            alt_m   = st.number_input("Altitudine (m):", 10.0, 15000.0, 100.0, 10.0, key="gsd_alt")
+            focal   = st.number_input("Focal length (mm):", 1.0, 200.0, 8.8, 0.5, key="gsd_focal")
+            sensor  = st.number_input("Latime senzor (mm):", 1.0, 50.0, 13.2, 0.1, key="gsd_sensor")
+            img_w_px = st.number_input("Latime imagine (px):", 100, 20000, 4000, 100, key="gsd_imgw",
+                                        format="%d")
+            scala_m_per_px = calculeaza_gsd(alt_m, focal, sensor, int(img_w_px))
+            st.metric("GSD calculat", f"{scala_m_per_px:.4f} m/px",
+                      help="1 pixel in imagine = aceasta distanta in realitate")
+            # Exemple rapide
+            st.caption("Exemple: DJI Phantom 4 la 100m → 0.033 m/px | "
+                        "Telefon Samsung (zbor avion 11500m) → ~27 m/px")
+
+        else:  # Manual
+            scala_m_per_px = st.number_input(
+                "GSD manual (m/px):", 0.001, 500.0, 0.05, 0.005, key="scala_manual"
+            )
 
         st.divider()
         st.markdown("**Metoda detectie:**")
@@ -879,14 +949,14 @@ with tab3:
 
         import pandas as pd
         df = pd.DataFrame([{
-            "Nr.":         p["nr"],
-            "ID Parcela":  p["id"],
-            "Cultura":     p["cultura"],
-            "Aria (sq m)": f"{p.get('aria_m2', int(p['aria_ha']*10000)):,}",
-            "Aria (ha)":   p["aria_ha"],
-            "Perim. (m)":  f"{int(p['perim_m']):,}",
-            "Aria (px²)":  p["aria_px"],
-            "Centru":      f"({p['centru'][0]}, {p['centru'][1]})",
+            "Nr.":             p["nr"],
+            "ID Parcela":      p["id"],
+            "Cultura":         p["cultura"],
+            "Aria (sq m)":     f"{p.get('aria_m2', int(p['aria_ha']*10000)):,}",
+            "Aria (ha)":       p["aria_ha"],
+            "Perim. (m)":      f"{int(p['perim_m']):,}",
+            "Compactitate":    p.get("compactitate", "—"),
+            "Aria (px²)":      p["aria_px"],
         } for p in parcele])
 
         st.dataframe(df, use_container_width=True, hide_index=True)
