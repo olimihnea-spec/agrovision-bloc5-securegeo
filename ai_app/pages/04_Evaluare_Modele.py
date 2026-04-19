@@ -122,8 +122,8 @@ for cultura, cfg in CULTURI_CFG.items():
 
 df = pd.DataFrame(rows)
 FEATURES = ["NDVI_mai", "NDVI_iunie", "NDVI_iulie", "NDVI_august"]
-X_all = df[FEATURES].values
-y_all = df["cultura"].values
+X_all = df[FEATURES].to_numpy()
+y_all = df["cultura"].to_numpy()
 
 scaler = StandardScaler()
 X_sc   = scaler.fit_transform(X_all)

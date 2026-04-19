@@ -346,8 +346,8 @@ with tab3:
 
     with col_rez:
         if antreneaza:
-            X = df[FEATURES].values
-            y = df["cultura"].values
+            X = df[FEATURES].to_numpy()
+            y = df["cultura"].to_numpy()
 
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=test_size, random_state=42, stratify=y
@@ -521,8 +521,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, confusion_matrix
 
 # 1. Pregatire date
-X = df[["NDVI_mai", "NDVI_iunie", "NDVI_iulie", "NDVI_august"]].values
-y = df["cultura"].values
+X = df[["NDVI_mai", "NDVI_iunie", "NDVI_iulie", "NDVI_august"]].to_numpy()
+y = df["cultura"].to_numpy()
 
 # 2. Split train/test
 X_train, X_test, y_train, y_test = train_test_split(

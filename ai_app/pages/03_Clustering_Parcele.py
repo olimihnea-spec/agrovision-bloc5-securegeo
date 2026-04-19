@@ -119,7 +119,7 @@ df = pd.DataFrame(rows)
 FEATURES = ["NDVI_mai", "NDVI_iunie", "NDVI_iulie", "NDVI_august"]
 
 scaler_global = StandardScaler()
-X_scaled = scaler_global.fit_transform(df[FEATURES].values)
+X_scaled = scaler_global.fit_transform(df[FEATURES].to_numpy())
 
 # PCA 2D pentru vizualizare
 pca = PCA(n_components=2, random_state=42)
@@ -528,7 +528,7 @@ with tab3:
                 db = DBSCAN(eps=eps_val, min_samples=min_samp_val)
                 df["cluster_db"] = db.fit_predict(X_scaled)
 
-                n_clustere = len(set(df["cluster_db"])) - (1 if -1 in df["cluster_db"].values else 0)
+                n_clustere = len(set(df["cluster_db"])) - (1 if -1 in df["cluster_db"].to_numpy() else 0)
                 n_noise    = int((df["cluster_db"] == -1).sum())
                 pct_noise  = n_noise / len(df) * 100
 

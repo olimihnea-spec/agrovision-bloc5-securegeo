@@ -252,8 +252,8 @@ with tab2:
 
         with col_res:
             if porneste:
-                X = df[FEATS].values
-                y = df[TARGET].values
+                X = df[FEATS].to_numpy()
+                y = df[TARGET].to_numpy()
 
                 X_tr, X_te, y_tr, y_te = train_test_split(
                     X, y, test_size=test_pct/100,

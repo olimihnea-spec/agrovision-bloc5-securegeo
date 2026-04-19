@@ -121,8 +121,8 @@ for cultura, cfg in CULTURI_CFG.items():
 
 df = pd.DataFrame(rows)
 FEATURES = ["NDVI_mai", "NDVI_iunie", "NDVI_iulie", "NDVI_august"]
-X_all = df[FEATURES].values
-y_all = df["cultura"].values
+X_all = df[FEATURES].to_numpy()
+y_all = df["cultura"].to_numpy()
 
 X_train, X_test, y_train, y_test = train_test_split(
     X_all, y_all, test_size=0.2, random_state=42, stratify=y_all

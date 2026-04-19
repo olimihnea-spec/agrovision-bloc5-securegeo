@@ -707,8 +707,8 @@ import numpy as np
 
 # 1. Pregatire date
 X = df[["NDVI_mai", "NDVI_iunie", "NDVI_iulie", "NDVI_august",
-        "precipitatii_mm", "temperatura_C"]].values
-y = df["productie_kg_ha"].values
+        "precipitatii_mm", "temperatura_C"]].to_numpy()
+y = df["productie_kg_ha"].to_numpy()
 
 # 2. Split train/test
 X_train, X_test, y_train, y_test = train_test_split(
