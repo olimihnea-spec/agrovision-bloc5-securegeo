@@ -4,6 +4,13 @@ Pagina principala
 Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu | UCB Targu Jiu | APIA CJ Gorj
 """
 
+import pandas as pd
+# Forteaza backend numpy standard (fix compatibilitate Python 3.14 + PyArrow)
+try:
+    pd.options.future.infer_string = False
+except AttributeError:
+    pass
+
 import streamlit as st
 from datetime import date
 
