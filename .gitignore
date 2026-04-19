@@ -1,0 +1,33 @@
+# Fotografii reale (fisiere mari - nu in git)
+aplicatia TimeStamp/
+fotografii Location on Photo/
+aolicatia GPS Camera/
+aplicatia GPS Camera/
+
+# Output-uri generate local
+securegeo_output/
+__pycache__/
+*.pyc
+*.pyo
+.streamlit/secrets.toml
+
+# Modele mari
+*.pt
+*.pth
+*.h5
+*.pkl
+
+# Fisiere temporare
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Medii virtuale
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
