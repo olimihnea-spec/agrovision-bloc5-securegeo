@@ -1371,6 +1371,9 @@ with tab2:
                     )
 
                 elif metoda_efectiva == "slic":
+                    # Diagnostic intermediar — afisam starea land mask
+                    import io as _io
+                    _diag = st.empty()
                     img_rez, parcele_detectate, mask_grad = detecteaza_slic_watershed(
                         img_src, scala_m_per_px,
                         aria_min_px=aria_min_px,
@@ -1383,6 +1386,14 @@ with tab2:
                         culoare_contur=culoare_contur_bgr,
                         arata_cultura=arata_cultura,
                     )
+                    if mask_grad is not None:
+                        land_px = int(cv2.countNonZero(mask_grad))
+                        _diag.info(
+                            f"DIAGNOSTIC SLIC: land mask={land_px:,} px "
+                            f"({100*land_px/(img_src.shape[0]*img_src.shape[1]):.1f}% din imagine) | "
+                            f"parcele={len(parcele_detectate)} | "
+                            f"aria_min={aria_min_px} px | n_seg={n_segments}"
+                        )
 
                 elif metoda_efectiva == "gradient":
                     img_rez, parcele_detectate, mask_grad = detecteaza_gradient_advanced(
