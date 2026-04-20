@@ -26,6 +26,17 @@ try:
 except ImportError:
     SKIMAGE_OK = False
 
+# Import direct din scriptul functional testat (detect_parcels_unified.py)
+try:
+    import sys, os
+    _pages_dir = os.path.dirname(os.path.abspath(__file__))
+    if _pages_dir not in sys.path:
+        sys.path.insert(0, _pages_dir)
+    from detect_parcels_unified import segment_parcels, build_overlay_mask
+    UNIFIED_OK = True
+except Exception as _e:
+    UNIFIED_OK = False
+
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1371,28 +1382,70 @@ with tab2:
                     )
 
                 elif metoda_efectiva == "slic":
-                    # Diagnostic intermediar — afisam starea land mask
-                    import io as _io
-                    _diag = st.empty()
-                    img_rez, parcele_detectate, mask_grad = detecteaza_slic_watershed(
-                        img_src, scala_m_per_px,
-                        aria_min_px=aria_min_px,
-                        id_fermier_prefix=id_prefix,
-                        masca_compas=masca_compas,
-                        masca_minimap=masca_minimap,
-                        masca_text_ui=masca_text_ui,
-                        n_segments=n_segments,
-                        aspect_max=aspect_max,
-                        culoare_contur=culoare_contur_bgr,
-                        arata_cultura=arata_cultura,
-                    )
-                    if mask_grad is not None:
-                        land_px = int(cv2.countNonZero(mask_grad))
-                        _diag.info(
-                            f"DIAGNOSTIC SLIC: land mask={land_px:,} px "
-                            f"({100*land_px/(img_src.shape[0]*img_src.shape[1]):.1f}% din imagine) | "
-                            f"parcele={len(parcele_detectate)} | "
+                    if UNIFIED_OK:
+                        # Folosim direct functia din detect_parcels_unified.py (testata, functionala)
+                        h_img, w_img = img_src.shape[:2]
+                        valid_mask = build_overlay_mask(
+                            h_img, w_img,
+                            compass=(0, 70, min(430, w_img), min(470, h_img))
+                                if masca_compas else (0, 0, 0, 0),
+                            minimap=(0, min(930, h_img), min(560, w_img), None)
+                                if masca_minimap else (0, 0, 0, 0),
+                            telemetry=(min(1040, w_img), min(820, h_img), None, None)
+                                if masca_text_ui else (0, 0, 0, 0),
+                        )
+                        overlay, _, mask_grad, _, results = segment_parcels(
+                            img_bgr=img_src,
+                            valid_mask=valid_mask,
+                            n_segments=n_segments,
+                            min_area_px=aria_min_px,
+                            max_aspect_ratio=aspect_max,
+                        )
+                        # Converteste rezultatele in formatul intern al aplicatiei
+                        parcele_detectate = []
+                        for r in results:
+                            aria_m2  = int(r["area_px2"] * (scala_m_per_px ** 2))
+                            aria_ha  = round(aria_m2 / 10_000, 4)
+                            perim_m  = round(r["perimeter_px"] * scala_m_per_px, 1)
+                            cx_p     = r["bbox"][0] + r["bbox"][2] // 2
+                            cy_p     = r["bbox"][1] + r["bbox"][3] // 2
+                            parcele_detectate.append({
+                                "id":           f"{id_prefix}-XX-{r['parcel']:03d}",
+                                "cultura":      "Necunoscuta",
+                                "aria_ha":      aria_ha,
+                                "aria_m2":      aria_m2,
+                                "aria_px":      r["area_px2"],
+                                "perim_m":      perim_m,
+                                "perim_px":     r["perimeter_px"],
+                                "compactitate": round((4*3.14159*r["area_px2"])/(r["perimeter_px"]**2),3) if r["perimeter_px"]>0 else 0,
+                                "centru":       (cx_p, cy_p),
+                                "nr":           r["parcel"],
+                            })
+                        # Deseneaza contururile cu culoarea aleasa de user (implicit alb)
+                        img_rez = overlay.copy()
+                        if culoare_contur_bgr != (255, 255, 255):
+                            # Redeseneaza cu culoarea aleasa daca nu e alb
+                            img_rez = img_src.copy()
+                            for r in results:
+                                cnt_pts = np.array(r["contour"], dtype=np.int32)
+                                cv2.drawContours(img_rez, [cnt_pts], -1, culoare_contur_bgr, 3)
+                        st.info(
+                            f"SLIC (script functional): {len(parcele_detectate)} parcele detectate | "
                             f"aria_min={aria_min_px} px | n_seg={n_segments}"
+                        )
+                    else:
+                        st.warning("detect_parcels_unified.py nu a putut fi importat. Folosesc implementarea interna.")
+                        img_rez, parcele_detectate, mask_grad = detecteaza_slic_watershed(
+                            img_src, scala_m_per_px,
+                            aria_min_px=aria_min_px,
+                            id_fermier_prefix=id_prefix,
+                            masca_compas=masca_compas,
+                            masca_minimap=masca_minimap,
+                            masca_text_ui=masca_text_ui,
+                            n_segments=n_segments,
+                            aspect_max=aspect_max,
+                            culoare_contur=culoare_contur_bgr,
+                            arata_cultura=arata_cultura,
                         )
 
                 elif metoda_efectiva == "gradient":
