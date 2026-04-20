@@ -67,10 +67,14 @@ in aceasta platforma au la baza <b>experienta profesionala proprie</b> a autorul
 acumulata in cele doua roluri simultane:
 
 <ul style='margin-top:10px; line-height:2.1;'>
-<li><b>Inspector Principal APIA</b> — Centrul Judetean Gorj, Serviciul Control pe Teren
+<li><b>Consilier Superior APIA</b> — Centrul Judetean Gorj, Serviciul Control pe Teren
 (peste 20 de ani de activitate, din momentul constituirii agentiei)</li>
-<li><b>Cercetator / Cadru didactic</b> — Universitatea Constantin Brancusi, Targu Jiu,
-Doctor in Inginerie Miniera, Universitatea din Petrosani (2024)</li>
+<li><b>Profesor Asociat / Cercetator</b> — Universitatea Constantin Brancusi, Targu Jiu,
+Doctor in Ingineria Sistemelor, Universitatea din Petrosani (2024)</li>
+<li><b>Absolvent curs postuniversitar</b> — Managementul Protectiei Infrastructurii Critice,
+Academia Fortelor Terestre "Nicolae Balcescu", Sibiu</li>
+<li><b>Membru Centrul Suport Situatii de Urgenta</b> — Prefectura Gorj
+(Ordinul Prefectului nr. 154/17.03.2025)</li>
 </ul>
 
 <b style='color:#c0392b;'>Aceasta platforma NU utilizeaza, NU acceseaza si NU prelucreaza
@@ -192,12 +196,19 @@ with col3:
 <div style='background:white; border-radius:10px; padding:16px;
      box-shadow:0 2px 8px rgba(0,0,0,0.07); font-size:12px; line-height:1.8;'>
 <b style='color:#1a5276;'>Autorul platformei</b><br><br>
-Prof. Asoc. Dr. Oliviu Mihnea Gamulescu<br>
-Universitatea Constantin Brancusi, Targu Jiu<br>
-Facultatea de Inginerie<br>
-Master Managementul Riscului in Agricultura (MRA)<br><br>
-Inspector Principal — APIA Centrul Judetean Gorj<br>
-Serviciul Control pe Teren<br><br>
+Prof. Asoc. Dr. Oliviu Mihnea Gamulescu<br><br>
+<b>Academic:</b><br>
+Profesor Asociat — Universitatea Constantin Brancusi, Targu Jiu<br>
+Facultatea de Inginerie | Master Managementul Riscului in Agricultura (MRA)<br><br>
+<b>Profesional APIA:</b><br>
+Consilier Superior — APIA Centrul Judetean Gorj<br>
+Serviciul Control pe Teren (20+ ani, din momentul constituirii agentiei)<br><br>
+<b>Formare militara si securitate:</b><br>
+Absolvent curs postuniversitar:<br>
+<i>Managementul Protectiei Infrastructurii Critice</i><br>
+Academia Fortelor Terestre "Nicolae Balcescu", Sibiu<br><br>
+Membru — Centrul Suport al Situatiilor de Urgenta<br>
+Prefectura Gorj (Ordinul Prefectului nr. 154/17.03.2025)<br><br>
 <b>Teza de doctorat:</b><br>
 <i>"Contributii privind recunoasterea automata a culturilor
 cu ajutorul unei Drone"</i><br>
