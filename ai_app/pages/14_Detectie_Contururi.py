@@ -37,7 +37,7 @@ try:
 except Exception as _e:
     UNIFIED_OK = False
 
-_VERSION = "v2026-04-20-E"   # schimba dupa fiecare restart pentru a confirma versiunea
+_VERSION = "v2026-04-20-F"   # schimba dupa fiecare restart pentru a confirma versiunea
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIG
@@ -734,12 +734,14 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
                              iterations=2)
 
     # ── 5. Distance transform + markeri ──────────────────────────────────────
-    # IMPORTANT: dist brut (fara normalizare), fara threshold_abs — identic cu model
+    # dist brut (fara normalizare); min_distance si threshold_abs mai stricte
+    # pentru a reduce numarul de markeri si a obtine ~11 parcele curate
     dist = cv2.distanceTransform(land, cv2.DIST_L2, 5)
 
     coords = peak_local_max(
         dist,
-        min_distance=40,
+        min_distance=80,
+        threshold_abs=0.2,
         labels=(land > 0),
     )
     markers = np.zeros_like(gray, dtype=np.int32)
