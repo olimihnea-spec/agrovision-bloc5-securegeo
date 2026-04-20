@@ -845,6 +845,160 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
     return img_rezultat, parcele, land
 
 
+def detecteaza_avion(img_bgr: np.ndarray,
+                     scala_m_per_px: float,
+                     aria_min_px: int = 300,
+                     id_fermier_prefix: str = "APIA-GJ",
+                     n_culori: int = 15,
+                     aspect_max: float = 20.0,
+                     culoare_contur=(255, 255, 255),
+                     arata_cultura: bool = False) -> tuple:
+    """
+    Algoritm dedicat imaginilor aeriene de la altitudine mare (avion, 3000-12000m).
+
+    La aceasta scala parcelele sunt mici (20-200 px latura) si SLIC/Watershed
+    sunt prea grosolare. Abordare: cuantizare culori → contur per culoare dominanta.
+
+    Pipeline:
+    1. pyrMeanShiftFiltering mic (sp=8, sr=16) — netezire fara pierdere margini
+    2. Cuantizare BGR: rotunjire la multiplu de n_culori → clustere culoare omogene
+    3. Top 10 culori dominante (exclude alb/negru = cer, nori, UI)
+    4. Per culoare: masca binara → MORPH_CLOSE(5,5) + MORPH_OPEN(3,3) → findContours
+    5. Filtrare: aria_min_px, aspect_max, exclude margini imagine
+    6. Deduplicare: elimina contururi cu overlap > 50% (IoU)
+    7. Inscriere text 3 linii stil Google Earth
+    """
+    h, w = img_bgr.shape[:2]
+
+    # ── 1. Netezire usoara — pastreaza tranzitiile de culoare intre parcele ────
+    smoothed = cv2.pyrMeanShiftFiltering(img_bgr, sp=8, sr=16)
+
+    # ── 2. Cuantizare culori ───────────────────────────────────────────────────
+    # Rotunjire la multiplu de n_culori in fiecare canal → reduce variatii de zgomot
+    quant = (smoothed // n_culori) * n_culori
+
+    # ── 3. Culori dominante (top 10) ──────────────────────────────────────────
+    pixels = quant.reshape(-1, 3)
+    unique_colors, counts = np.unique(pixels, axis=0, return_counts=True)
+
+    # Exclude albul (~cer, nori) si negrul (~UI overlay)
+    def este_neutru(bgr):
+        b, g, r = int(bgr[0]), int(bgr[1]), int(bgr[2])
+        luminanta = (b + g + r) / 3
+        saturatie = max(b, g, r) - min(b, g, r)
+        return luminanta > 200 or luminanta < 20 or saturatie < 15
+
+    culori_valide = [(c, cnt) for c, cnt in zip(unique_colors, counts)
+                     if not este_neutru(c)]
+    culori_valide.sort(key=lambda x: -x[1])
+    top_culori = culori_valide[:10]
+
+    # ── 4. Detectie contururi per culoare ─────────────────────────────────────
+    img_rezultat = img_bgr.copy()
+    parcele      = []
+    nr_parcela   = 1
+    aria_totala  = h * w
+    contururi_gasite = []  # pentru deduplicare
+
+    kernel_close = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    kernel_open  = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+
+    for culoare_bgr, _ in top_culori:
+        # Masca pixeli cu aceasta culoare (toleranta ±n_culori/2)
+        tol = n_culori // 2
+        lower = np.clip(culoare_bgr.astype(np.int32) - tol, 0, 255).astype(np.uint8)
+        upper = np.clip(culoare_bgr.astype(np.int32) + tol, 0, 255).astype(np.uint8)
+        mask = cv2.inRange(quant, lower, upper)
+
+        # Morfologie: umple gauri, elimina zgomot
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close, iterations=2)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,  kernel_open,  iterations=1)
+
+        contururi_c, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        for cnt in contururi_c:
+            cnt_area = cv2.contourArea(cnt)
+            if cnt_area < aria_min_px:
+                continue
+            if cnt_area > aria_totala * 0.15:
+                continue  # prea mare = cer sau sol neuniform
+
+            x_b, y_b, w_b, h_b = cv2.boundingRect(cnt)
+            # Exclude contururi care ating marginile imaginii (UI sau cer)
+            if x_b < 5 or y_b < 5 or (x_b + w_b) > w - 5 or (y_b + h_b) > h - 5:
+                continue
+            aspect = max(w_b / max(h_b, 1), h_b / max(w_b, 1))
+            if aspect > aspect_max:
+                continue
+
+            # Deduplicare simpla: verifica overlap cu contururi deja gasite
+            cx_c, cy_c = centru_contur(cnt)
+            duplicat = False
+            for cnt_prev, _, _ in contururi_gasite:
+                cx_p, cy_p = centru_contur(cnt_prev)
+                dist = np.sqrt((cx_c - cx_p)**2 + (cy_c - cy_p)**2)
+                if dist < np.sqrt(cnt_area) * 0.5:
+                    duplicat = True
+                    break
+            if duplicat:
+                continue
+
+            perim  = cv2.arcLength(cnt, True)
+            approx = cv2.approxPolyDP(cnt, 0.004 * perim, True)
+
+            metrici = calculeaza_metrici_exacte(cnt, scala_m_per_px)
+            roi     = img_bgr[y_b:y_b+h_b, x_b:x_b+w_b]
+            cultura = detecteaza_cultura_hsv(roi)
+
+            prefix_cultura = {
+                "Grau": "GR", "Floarea-soarelui": "FS",
+                "Porumb": "PO", "Lucerna": "LU",
+                "Fanete": "FA", "Necunoscuta": "XX"
+            }.get(cultura, "XX")
+            id_parcela = f"{id_fermier_prefix}-{prefix_cultura}-{nr_parcela:03d}"
+
+            info = {
+                "id":           id_parcela,
+                "cultura":      cultura,
+                "aria_ha":      metrici["aria_ha"],
+                "aria_m2":      metrici["aria_m2"],
+                "aria_px":      int(metrici["aria_px2"]),
+                "perim_m":      metrici["perim_m"],
+                "perim_px":     metrici["perim_px"],
+                "compactitate": metrici["compactitate"],
+                "centru":       (cx_c, cy_c),
+                "nr":           nr_parcela,
+            }
+
+            # Deseneaza conturul
+            cv2.drawContours(img_rezultat, [approx], -1, culoare_contur, 2)
+
+            # Text 3 linii stil Google Earth
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            linie1, scale1, th1 = f"P{nr_parcela}", 0.5, 1
+            linie2, scale2, th2 = f"{metrici['aria_m2']:,} sq m", 0.4, 1
+            linie3, scale3, th3 = f"{int(metrici['perim_m']):,} m", 0.4, 1
+
+            for linie, scale, th, dy in [
+                (linie1, scale1, th1, -14),
+                (linie2, scale2, th2,  2),
+                (linie3, scale3, th3, 14),
+            ]:
+                (tw, _), _ = cv2.getTextSize(linie, font, scale, th)
+                tx = max(2, min(cx_c - tw // 2, w - tw - 2))
+                ty = max(10, min(cy_c + dy, h - 4))
+                cv2.putText(img_rezultat, linie, (tx, ty), font, scale,
+                            (0, 0, 0), th + 2, cv2.LINE_AA)
+                cv2.putText(img_rezultat, linie, (tx, ty), font, scale,
+                            (255, 255, 255), th, cv2.LINE_AA)
+
+            contururi_gasite.append((cnt, culoare_bgr, nr_parcela))
+            parcele.append(info)
+            nr_parcela += 1
+
+    return img_rezultat, parcele, None
+
+
 def segmenteaza_hsv_agricol(img_bgr: np.ndarray,
                               masca_compas: bool = True,
                               masca_minimap: bool = True,
@@ -1103,6 +1257,7 @@ with tab2:
             "Algoritm segmentare:",
             [
                 slic_label,
+                "Mod Avion / Altitudine Mare (Color Quant)",
                 "Gradient Avansat (Mean Shift + CLAHE)",
                 "HSV Vegetatie/Sol",
                 "Linii albe (Google Earth / QGIS)",
@@ -1110,11 +1265,12 @@ with tab2:
                 "Canny (contraste puternice)",
                 "Masca non-negru (imagine sintetica)",
             ],
-            index=0 if uploaded is not None else 6,
+            index=0 if uploaded is not None else 7,
             key="metoda_seg"
         )
         metoda_map = {
             slic_label:                                             "slic",
+            "Mod Avion / Altitudine Mare (Color Quant)":           "avion",
             "Gradient Avansat (Mean Shift + CLAHE)":               "gradient",
             "HSV Vegetatie/Sol":                                    "hsv",
             "Linii albe (Google Earth / QGIS)":                    "linii_albe",
@@ -1130,8 +1286,18 @@ with tab2:
         masca_compas = masca_minimap = masca_text_ui = False
         aspect_max = 12.0
         n_segments = 350
+        n_culori_avion = 15
 
-        if metoda in ("slic", "gradient", "hsv"):
+        if metoda == "avion":
+            st.info("Mod Avion: cuantizare culori, ideal pentru imagini la 3000-12000m altitudine.")
+            n_culori_avion = st.slider("Granularitate culori:", 5, 30, 15, 5,
+                                       key="n_culori_avion",
+                                       help="Valori mici = mai putine culori = parcele mai mari si mai putine")
+            aspect_max = st.slider("Aspect ratio maxim:", 3.0, 30.0, 20.0, 0.5,
+                                   key="aspect_max_avion",
+                                   help="Parcele mai alungite (diguri, fasii) sunt ignorate peste aceasta valoare")
+
+        elif metoda in ("slic", "gradient", "hsv"):
             st.markdown("**Mascheaza UI Google Earth:**")
             masca_compas  = st.checkbox("Compas (stanga sus)",      value=True, key="m_compas")
             masca_minimap = st.checkbox("Mini-harta (stanga jos)",   value=True, key="m_mini")
@@ -1207,7 +1373,18 @@ with tab2:
             with st.spinner("Detectez contururi... poate dura 10-30s"):
                 mask_grad = None
 
-                if metoda_efectiva == "slic":
+                if metoda_efectiva == "avion":
+                    img_rez, parcele_detectate, _ = detecteaza_avion(
+                        img_src, scala_m_per_px,
+                        aria_min_px=aria_min_px,
+                        id_fermier_prefix=id_prefix,
+                        n_culori=n_culori_avion,
+                        aspect_max=aspect_max,
+                        culoare_contur=culoare_contur_bgr,
+                        arata_cultura=arata_cultura,
+                    )
+
+                elif metoda_efectiva == "slic":
                     img_rez, parcele_detectate, mask_grad = detecteaza_slic_watershed(
                         img_src, scala_m_per_px,
                         aria_min_px=aria_min_px,
