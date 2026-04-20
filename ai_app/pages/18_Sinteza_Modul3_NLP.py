@@ -356,10 +356,11 @@ def genereaza_raport(text_original: str, clasificare: dict, rezumat: str,
 # INTERFATA
 # ══════════════════════════════════════════════════════════════════════════════
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Teorie & Pipeline",
     "Analiza Document",
     "Rezultate detaliate",
+    "Pipeline Integrat (Date Reale)",
     "Ce am invatat"
 ])
 
@@ -694,9 +695,206 @@ with tab3:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — CE AM INVATAT
+# TAB 4 — PIPELINE INTEGRAT CU DATE REALE
 # ══════════════════════════════════════════════════════════════════════════════
 with tab4:
+    st.subheader("Pipeline integrat: SecureGeo + Anomalii + Contururi + NLP")
+
+    st.markdown("""
+<div style='background:linear-gradient(135deg,#1a5276 0%,#117a65 50%,#6c3483 100%);
+     border-radius:10px; padding:14px 20px; color:white; margin-bottom:16px;'>
+<div style='font-size:14px; font-weight:700;'>
+    De ce aceste trei module sunt vitale pentru SecureGeo?
+</div>
+<div style='font-size:12px; margin-top:6px; opacity:0.9; line-height:1.7;'>
+    Detectia contururilor (Z14) masoara suprafata reala a parcelelor din imagini georeferentiate (Z10b).
+    Detectia anomaliilor NDVI (Z10) identifica zone de stres sau culturi gresite.
+    NLP (Z18) extrage datele declarate din documentele PAC si genereaza raportul de neconformitate.
+    Impreuna formeaza un sistem complet de inspectie agricola automatizata.
+</div>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── Diagrama flux integrat ────────────────────────────────────────────────
+    st.markdown("### Fluxul complet al inspectiei agricole automatizate")
+
+    etape = [
+        {
+            "nr": "1",
+            "modul": "Z10b — SecureGeo",
+            "titlu": "Georeferentiere imagine",
+            "detalii": "Fotografie aeriana cu EXIF complet (lat, lon, altitudine 11.439m). Timestamp Camera — singura aplicatie cu EXIF altitudine confirmat. Offline, GDPR-evaluat.",
+            "output": "Imagine georeferentiata + coordonate GPS verificate",
+            "culoare": "#1a5276",
+        },
+        {
+            "nr": "2",
+            "modul": "Z14 — Contururi",
+            "titlu": "Detectie contururi parcele",
+            "detalii": "SLIC + Watershed pe imaginea aeriana. Calcul suprafata reala in pixeli → conversie ha prin GSD. Rezultat: suprafata masurata obiectiv, independent de declaratia fermierului.",
+            "output": "Suprafata masurata [ha] + perimetru [m] per parcela",
+            "culoare": "#117a65",
+        },
+        {
+            "nr": "3",
+            "modul": "Z10 — Anomalii",
+            "titlu": "Detectie anomalii NDVI",
+            "detalii": "Calcul NDVI din canale multispectrale sau RGB proxy. Identificare zone cu NDVI < 0.2 (stres, seceta, cultura gresita). Scoring risc per parcela.",
+            "output": "Harta anomalii + scor risc + cultura identificata",
+            "culoare": "#8e44ad",
+        },
+        {
+            "nr": "4",
+            "modul": "Z18 — NLP",
+            "titlu": "Analiza document PAC",
+            "detalii": "Extragere date declarate: fermier (NER), suprafata declarata (regex ha), cultura declarata, CNP, cod LPIS. Comparare automata cu datele masurate din pasii 2-3.",
+            "output": "Suprafata declarata + cultura declarata + identitate fermier",
+            "culoare": "#d35400",
+        },
+        {
+            "nr": "5",
+            "modul": "Z18 — Raport",
+            "titlu": "Generare raport neconformitate",
+            "detalii": "Comparare suprafata declarata (NLP) vs. masurata (CV+drone). Daca diferenta > 5%: flag automat neconformitate. Raport formal generat, gata de semnat.",
+            "output": "Raport PDF/TXT cu concluzie si penalizare calculata",
+            "culoare": "#c0392b",
+        },
+    ]
+
+    for i, etapa in enumerate(etape):
+        st.markdown(f"""
+<div style='display:flex; gap:0; align-items:stretch; margin:6px 0;'>
+    <div style='background:{etapa["culoare"]}; color:white; border-radius:8px 0 0 8px;
+         padding:12px 16px; min-width:130px; text-align:center; display:flex;
+         flex-direction:column; justify-content:center;'>
+        <div style='font-size:20px; font-weight:900;'>{etapa["nr"]}</div>
+        <div style='font-size:9px; font-weight:700; margin-top:4px;
+             opacity:0.85; line-height:1.3;'>{etapa["modul"]}</div>
+    </div>
+    <div style='background:white; border-radius:0 8px 8px 0; flex:1; padding:12px 16px;
+         box-shadow:0 2px 6px rgba(0,0,0,0.06); border-top:1px solid #eee;
+         border-right:1px solid #eee; border-bottom:1px solid #eee;'>
+        <div style='font-weight:700; color:#333; font-size:13px;'>{etapa["titlu"]}</div>
+        <div style='font-size:11px; color:#555; margin-top:4px;
+             line-height:1.6;'>{etapa["detalii"]}</div>
+        <div style='margin-top:8px; font-size:11px; background:#f5f5f5;
+             border-radius:4px; padding:4px 10px; color:{etapa["culoare"]};
+             font-weight:600;'>Output: {etapa["output"]}</div>
+    </div>
+</div>
+{"<div style='margin-left:65px; color:#bbb; font-size:18px; line-height:1;'>↓</div>" if i < len(etape)-1 else ""}
+""", unsafe_allow_html=True)
+
+    st.divider()
+
+    # ── Exemplu concret ───────────────────────────────────────────────────────
+    st.markdown("### Exemplu concret: inspectie parcela GJ-001-A")
+
+    col_ex1, col_ex2 = st.columns(2)
+
+    with col_ex1:
+        st.markdown("""
+<div style='background:#eaf4fb; border-radius:10px; padding:14px;
+     border-left:4px solid #1a5276;'>
+<div style='font-weight:700; color:#1a5276; margin-bottom:8px;'>
+    Date din SecureGeo + Computer Vision (obiective)
+</div>
+<div style='font-size:12px; line-height:2.0;'>
+<b>Georeferentiere:</b> 45.0341°N, 23.1452°E<br>
+<b>Altitudine fotografie:</b> 432m (drone)<br>
+<b>GSD calculat:</b> 0.22 cm/px<br>
+<b>Suprafata masurata CV:</b> 4.31 ha<br>
+<b>Perimetru masurat:</b> 842 m<br>
+<b>NDVI mediu:</b> 0.58 (vegetatie normala)<br>
+<b>Zona anomalie NDVI &lt; 0.2:</b> 0.12 ha (2.8%)<br>
+<b>Cultura identificata NDVI:</b> grau (confirmat)
+</div>
+</div>
+""", unsafe_allow_html=True)
+
+    with col_ex2:
+        st.markdown("""
+<div style='background:#fef9e7; border-radius:10px; padding:14px;
+     border-left:4px solid #d35400;'>
+<div style='font-weight:700; color:#d35400; margin-bottom:8px;'>
+    Date din documentul PAC (declarate)
+</div>
+<div style='font-size:12px; line-height:2.0;'>
+<b>Fermier (NER):</b> Popescu Ion<br>
+<b>CNP (NER):</b> 1750312180042<br>
+<b>Cod LPIS (NER):</b> GJ-001-A<br>
+<b>Suprafata declarata (NER):</b> 4.52 ha<br>
+<b>Cultura declarata (NER):</b> Grau<br>
+<b>Subventie solicitata:</b> 285 EUR/ha<br>
+<b>Total subventie parcela:</b> 1.288 EUR<br>
+<b>Data cerere:</b> 15 mai 2025
+</div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("""
+<div style='background:#fdedec; border-radius:10px; padding:14px; margin-top:8px;
+     border-left:4px solid #c0392b;'>
+<div style='font-weight:700; color:#922b21; font-size:13px;'>
+    Concluzie automata — Raport neconformitate
+</div>
+<div style='font-size:12px; line-height:1.8; margin-top:6px;'>
+<b>Diferenta suprafata:</b> 4.52 ha (declarata) vs 4.31 ha (masurata) = <b>0.21 ha = 4.6%</b><br>
+<b>Prag APIA:</b> 5% → <b style='color:#27ae60;'>SUB PRAG — fara penalizare</b><br>
+<b>Cultura:</b> Grau declarata = Grau identificat NDVI → <b style='color:#27ae60;'>CONFORM</b><br>
+<b>Anomalie NDVI:</b> 0.12 ha zona stresata → <b style='color:#e67e22;'>MONITORIZARE recomandata</b><br><br>
+<i>Raport generat automat in 3 secunde. Manual: ~45 minute per parcela.</i>
+</div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.divider()
+
+    # ── Valoare academica ─────────────────────────────────────────────────────
+    st.markdown("### Valoarea academica si institutionala a acestui pipeline")
+
+    col_v1, col_v2, col_v3 = st.columns(3)
+    with col_v1:
+        st.markdown("""
+<div style='background:white; border-radius:10px; padding:14px;
+     box-shadow:0 2px 8px rgba(0,0,0,0.07); border-top:4px solid #1a5276;
+     text-align:center; font-size:12px;'>
+<div style='font-size:28px; font-weight:900; color:#1a5276;'>MDPI</div>
+<div style='font-weight:700; margin:6px 0;'>Drones IF 4.8 Q1</div>
+<div style='color:#555; line-height:1.6;'>Articol ISI in pregatire.
+Datele reale din zbor sunt baza empirica unica in literatura de specialitate.</div>
+</div>
+""", unsafe_allow_html=True)
+
+    with col_v2:
+        st.markdown("""
+<div style='background:white; border-radius:10px; padding:14px;
+     box-shadow:0 2px 8px rgba(0,0,0,0.07); border-top:4px solid #8e44ad;
+     text-align:center; font-size:12px;'>
+<div style='font-size:28px; font-weight:900; color:#8e44ad;'>ACE2-EU</div>
+<div style='font-weight:700; margin:6px 0;'>ARIES Incubator</div>
+<div style='color:#555; line-height:1.6;'>Propunere depusa 20 apr 2026.
+Pipeline integrat = demonstrator pentru Cybersecurity + Digital Sovereignty.</div>
+</div>
+""", unsafe_allow_html=True)
+
+    with col_v3:
+        st.markdown("""
+<div style='background:white; border-radius:10px; padding:14px;
+     box-shadow:0 2px 8px rgba(0,0,0,0.07); border-top:4px solid #117a65;
+     text-align:center; font-size:12px;'>
+<div style='font-size:28px; font-weight:900; color:#117a65;'>UCB</div>
+<div style='font-weight:700; margin:6px 0;'>Master MRA</div>
+<div style='color:#555; line-height:1.6;'>Suport de curs Master Managementul
+Riscului in Agricultura. Studenti invata AI aplicat pe cazuri reale APIA.</div>
+</div>
+""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — CE AM INVATAT
+# ══════════════════════════════════════════════════════════════════════════════
+with tab5:
     st.subheader("Modul 3 NLP — Sinteza cunostintelor")
 
     col1, col2 = st.columns(2)
