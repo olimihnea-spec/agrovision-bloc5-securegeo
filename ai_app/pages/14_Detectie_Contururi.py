@@ -37,7 +37,7 @@ try:
 except Exception as _e:
     UNIFIED_OK = False
 
-_VERSION = "v2026-04-20-D"   # schimba dupa fiecare restart pentru a confirma versiunea
+_VERSION = "v2026-04-20-E"   # schimba dupa fiecare restart pentru a confirma versiunea
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIG
@@ -673,8 +673,9 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
 
     h, w = img_bgr.shape[:2]
 
-    # ── 1. Mascare UI — coordonate identice cu scriptul de referinta ─────────
-    valid = np.ones((h, w), dtype=np.uint8)
+    # ── 1. Mascare UI — coordonate identice cu script_parcele_corect.py ──────
+    # IMPORTANT: valid 0/255 (nu 0/1) ca sa functioneze corect cv2.bitwise_and
+    valid = np.ones((h, w), dtype=np.uint8) * 255
     if masca_compas:
         cv2.rectangle(valid, (0, 90), (min(420, w), min(470, h)), 0, -1)
     if masca_minimap:
@@ -719,30 +720,26 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
     elevation = cv2.addWeighted(elevation, 1.0, bright, 0.45, 0)
     elevation = np.where(valid_bool, elevation, 255).astype(np.uint8)
 
-    # ── 4. Masca teren HSV ────────────────────────────────────────────────────
+    # ── 4. Masca teren HSV — identica cu script_parcele_corect.py ────────────
+    # IMPORTANT: numai green + brown (fara mask_darkveg care adauga zgomot)
+    # IMPORTANT: numai MORPH_CLOSE (fara MORPH_OPEN care elimina zone valide)
     hsv = cv2.cvtColor(smoothed_bgr, cv2.COLOR_BGR2HSV)
-    mask_green   = cv2.inRange(hsv, np.array([25, 18, 25]), np.array([95,  255, 255]))
-    mask_brown   = cv2.inRange(hsv, np.array([5,  18, 20]), np.array([28,  255, 220]))
-    mask_darkveg = cv2.inRange(hsv, np.array([20, 8,  10]), np.array([85,  180, 125]))
+    mask_green = cv2.inRange(hsv, np.array([25, 18, 25]), np.array([95,  255, 255]))
+    mask_brown = cv2.inRange(hsv, np.array([5,  18, 20]), np.array([28,  255, 220]))
 
     land = cv2.bitwise_or(mask_green, mask_brown)
-    land = cv2.bitwise_or(land, mask_darkveg)
     land = cv2.bitwise_and(land, valid)
     land = cv2.morphologyEx(land, cv2.MORPH_CLOSE,
                              cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11)),
                              iterations=2)
-    land = cv2.morphologyEx(land, cv2.MORPH_OPEN,
-                             cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)),
-                             iterations=1)
 
     # ── 5. Distance transform + markeri ──────────────────────────────────────
-    dist      = cv2.distanceTransform(land, cv2.DIST_L2, 5)
-    dist_norm = cv2.normalize(dist, None, 0, 1.0, cv2.NORM_MINMAX)
+    # IMPORTANT: dist brut (fara normalizare), fara threshold_abs — identic cu model
+    dist = cv2.distanceTransform(land, cv2.DIST_L2, 5)
 
     coords = peak_local_max(
-        dist_norm,
+        dist,
         min_distance=40,
-        threshold_abs=0.13,
         labels=(land > 0),
     )
     markers = np.zeros_like(gray, dtype=np.int32)
