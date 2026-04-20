@@ -1096,6 +1096,9 @@ with tab2:
         slic_label = ("SLIC + Watershed (recomandat imagini reale)"
                       if SKIMAGE_OK else
                       "SLIC + Watershed [lipseste scikit-image]")
+        # Reseteaza metoda la SLIC cand se incarca o imagine noua
+        if uploaded is not None and st.session_state.get("metoda_seg") == "Masca non-negru (imagine sintetica)":
+            st.session_state["metoda_seg"] = slic_label
         metoda_aleasa = st.selectbox(
             "Algoritm segmentare:",
             [
