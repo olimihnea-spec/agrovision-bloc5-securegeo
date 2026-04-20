@@ -37,6 +37,8 @@ try:
 except Exception as _e:
     UNIFIED_OK = False
 
+_VERSION = "v2026-04-20-C"   # schimba dupa fiecare restart pentru a confirma versiunea
+
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
@@ -61,6 +63,8 @@ st.sidebar.markdown("**Progres:** 14 / 30 zile")
 st.sidebar.progress(14 / 30)
 st.sidebar.markdown(f"**Data:** {datetime.date.today().strftime('%d.%m.%Y')}")
 st.sidebar.divider()
+# Diagnostic versiune — confirma ca ruleaza codul nou
+st.sidebar.caption(f"COD: {_VERSION} | SKIMAGE: {'OK' if SKIMAGE_OK else 'LIPSA'} | UNIFIED: {'OK' if UNIFIED_OK else 'LIPSA'}")
 st.sidebar.markdown("""
 **Concepte ziua 14:**
 - `cv2.findContours` — detectie contururi
