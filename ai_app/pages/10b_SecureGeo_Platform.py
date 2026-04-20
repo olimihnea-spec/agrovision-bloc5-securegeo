@@ -388,6 +388,88 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
+    # ── Evolutie proiect (timeline) ──────────────────────────────────────────
+    st.divider()
+    st.markdown("### Evolutia proiectului SecureGeo")
+
+    MILESTONES = [
+        {
+            "data": "18 apr 2026",
+            "titlu": "Zbor real Roma (FCO) → Bucuresti (OTP)",
+            "detalii": "362 foto + 1 video georeferentiat. EXIF confirmat: 11.439m altitudine, ~800 km/h. Baza empirica unica in literatura.",
+            "status": "FINALIZAT",
+            "culoare": "#27ae60",
+            "icon": "ZBOR",
+        },
+        {
+            "data": "18-19 apr 2026",
+            "titlu": "Analiza comparativa 4 aplicatii mobile",
+            "detalii": "Timestamp Camera, Location on Photo, GPS Camera, GeoFoto APIA. Evaluare GDPR, offline, EXIF complet.",
+            "status": "FINALIZAT",
+            "culoare": "#27ae60",
+            "icon": "ANALIZA",
+        },
+        {
+            "data": "19 apr 2026",
+            "titlu": "Deploy Streamlit Cloud 24/7",
+            "detalii": "https://georeferencing-applications.streamlit.app/ — platforma publica, accesibila international.",
+            "status": "LIVE",
+            "culoare": "#1a5276",
+            "icon": "DEPLOY",
+        },
+        {
+            "data": "20 apr 2026",
+            "titlu": "Depunere propunere ACE2-EU ARIES Incubator",
+            "detalii": 'Knowledge Creation Team Workshop #4 "Cybersecurity & Digital Sovereignty". Call aliniat funding post-august 2026. Leverage expertise ACE2-EU Alliance.',
+            "status": "DEPUS",
+            "culoare": "#8e44ad",
+            "icon": "PROPUNERE",
+        },
+        {
+            "data": "In curs",
+            "titlu": "Articol ISI — MDPI Drones (IF 4.8, Q1)",
+            "detalii": "Offline Georeferencing Capability as a Digital Sovereignty Requirement: A Flight-Based Evaluation of Mobile Applications for Agricultural Field Inspections",
+            "status": "IN LUCRU",
+            "culoare": "#e67e22",
+            "icon": "ARTICOL",
+        },
+        {
+            "data": "Iulie 2026",
+            "titlu": "Workshop ACE2-EU — UCB Targu Jiu",
+            "detalii": "Prezentare rezultate, colaborare cross-border, finantare UEFISCDI/ACE2-EU.",
+            "status": "PLANIFICAT",
+            "culoare": "#95a5a6",
+            "icon": "WORKSHOP",
+        },
+    ]
+
+    for m in MILESTONES:
+        badge_bg = m["culoare"]
+        st.markdown(f"""
+        <div style='display:flex; gap:16px; align-items:flex-start;
+             background:white; border-radius:10px; padding:12px 16px;
+             margin:6px 0; border-left:5px solid {badge_bg};
+             box-shadow:0 1px 4px rgba(0,0,0,0.07);'>
+            <div style='min-width:60px; text-align:center;'>
+                <div style='background:{badge_bg}; color:white; border-radius:6px;
+                     padding:2px 6px; font-size:9px; font-weight:700;
+                     margin-bottom:4px;'>{m["icon"]}</div>
+                <div style='font-size:10px; color:#888; line-height:1.3;'>{m["data"]}</div>
+            </div>
+            <div style='flex:1;'>
+                <div style='font-weight:700; color:#333; font-size:13px;
+                     display:flex; justify-content:space-between; align-items:center;'>
+                    {m["titlu"]}
+                    <span style='background:{badge_bg}; color:white; padding:2px 10px;
+                         border-radius:10px; font-size:10px; font-weight:700;
+                         margin-left:8px; white-space:nowrap;'>{m["status"]}</span>
+                </div>
+                <div style='font-size:11px; color:#666; margin-top:4px;
+                     line-height:1.5;'>{m["detalii"]}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — ANALIZA IMAGINE GPS
 # ══════════════════════════════════════════════════════════════════════════════
