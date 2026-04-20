@@ -640,13 +640,13 @@ def detecteaza_gradient_advanced(img_bgr: np.ndarray,
 
 def detecteaza_slic_watershed(img_bgr: np.ndarray,
                                scala_m_per_px: float,
-                               aria_min_px: int = 14000,
+                               aria_min_px: int = 15000,
                                id_fermier_prefix: str = "APIA-GJ",
                                masca_compas: bool = True,
                                masca_minimap: bool = True,
                                masca_text_ui: bool = True,
-                               n_segments: int = 350,
-                               aspect_max: float = 14.0,
+                               n_segments: int = 320,
+                               aspect_max: float = 16.0,
                                culoare_contur=(255, 255, 255),
                                arata_cultura: bool = False) -> tuple:
     """
@@ -665,21 +665,21 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
 
     h, w = img_bgr.shape[:2]
 
-    # ── 1. Mascare UI ─────────────────────────────────────────────────────────
+    # ── 1. Mascare UI (coordonate absolute calibrate pe imaginea reala) ───────
     valid = np.ones((h, w), dtype=np.uint8)
     if masca_compas:
-        # compas: ~stanga-sus: x=0..28%, y=8%..33%
-        cv2.rectangle(valid, (0, int(h*0.08)), (int(w*0.28), int(h*0.33)), 0, -1)
+        # compas: stanga-sus (0,90)→(420,470)
+        cv2.rectangle(valid, (0, 90), (min(420, w), min(470, h)), 0, -1)
     if masca_minimap:
-        # mini-harta: ~stanga-jos: x=0..37%, y=64%..100%
-        cv2.rectangle(valid, (0, int(h*0.64)), (int(w*0.37), h), 0, -1)
+        # mini-harta: stanga-jos (0,930)→(560,h)
+        cv2.rectangle(valid, (0, min(930, h)), (min(560, w), h), 0, -1)
     if masca_text_ui:
-        # telemetrie/logo: ~dreapta-jos: x=70%..100%, y=66%..100%
-        cv2.rectangle(valid, (int(w*0.70), int(h*0.66)), (w, h), 0, -1)
+        # telemetrie/logo: dreapta-jos (1070,890)→(w,h)
+        cv2.rectangle(valid, (min(1070, w), min(890, h)), (w, h), 0, -1)
     valid_bool = valid.astype(bool)
 
     # ── 2. Mean Shift + SLIC in LAB ───────────────────────────────────────────
-    smoothed_bgr = cv2.pyrMeanShiftFiltering(img_bgr, sp=16, sr=24)
+    smoothed_bgr = cv2.pyrMeanShiftFiltering(img_bgr, sp=18, sr=26)
     smoothed_rgb = cv2.cvtColor(smoothed_bgr, cv2.COLOR_BGR2RGB)
     lab = rgb2lab(smoothed_rgb)
 
@@ -711,8 +711,8 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
     )
 
     elevation = cv2.normalize(grad, None, 0, 255, cv2.NORM_MINMAX)
-    elevation = cv2.addWeighted(elevation, 0.7, slic_bounds, 0.7, 0)
-    elevation = cv2.addWeighted(elevation, 1.0, bright, 0.6, 0)
+    elevation = cv2.addWeighted(elevation, 0.8, slic_bounds, 0.7, 0)
+    elevation = cv2.addWeighted(elevation, 1.0, bright, 0.45, 0)
     elevation = np.where(valid_bool, elevation, 255).astype(np.uint8)
 
     # ── 4. Masca teren HSV ────────────────────────────────────────────────────
@@ -725,7 +725,7 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
     land = cv2.bitwise_or(land, mask_darkveg)
     land = cv2.bitwise_and(land, valid)
     land = cv2.morphologyEx(land, cv2.MORPH_CLOSE,
-                             cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)),
+                             cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11)),
                              iterations=2)
     land = cv2.morphologyEx(land, cv2.MORPH_OPEN,
                              cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)),
@@ -737,8 +737,8 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
 
     coords = peak_local_max(
         dist_norm,
-        min_distance=35,
-        threshold_abs=0.12,
+        min_distance=40,
+        threshold_abs=0.13,
         labels=(land > 0),
     )
     markers = np.zeros_like(gray, dtype=np.int32)
@@ -772,7 +772,7 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
             continue
 
         x_b, y_b, w_b, h_b = cv2.boundingRect(cnt)
-        if y_b < int(h * 0.08):   # elimina cer / orizont
+        if y_b < 110:   # elimina cer / orizont (absolut px)
             continue
         aspect = max(w_b / max(h_b, 1), h_b / max(w_b, 1))
         if aspect > aspect_max:
@@ -805,12 +805,40 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
             "nr":           nr_parcela,
         }
 
-        img_rezultat = inscrie_text_parcela(
-            img_rezultat, approx, info,
-            culoare_contur=culoare_contur,
-            grosime_contur=3,
-            arata_cultura=arata_cultura,
-        )
+        # Deseneaza conturul
+        cv2.drawContours(img_rezultat, [approx], -1, culoare_contur, 3)
+
+        # Text stil Google Earth: 3 linii cu marimi diferite
+        cx, cy = centru_contur(cnt)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+
+        # Linia 1: ID parcela (mai mare)
+        linie1 = f"P{nr_parcela}"
+        scale1, th1 = 0.7, 2
+        (tw1, _), _ = cv2.getTextSize(linie1, font, scale1, th1)
+        tx1 = max(4, min(cx - tw1 // 2, w - tw1 - 4))
+        ty1 = max(20, min(cy - 22, h - 50))
+        cv2.putText(img_rezultat, linie1, (tx1, ty1), font, scale1, (0, 0, 0), th1 + 2, cv2.LINE_AA)
+        cv2.putText(img_rezultat, linie1, (tx1, ty1), font, scale1, (255, 255, 255), th1, cv2.LINE_AA)
+
+        # Linia 2: Arie (sq m)
+        linie2 = f"{metrici['aria_m2']:,} sq m"
+        scale2, th2 = 0.55, 1
+        (tw2, _), _ = cv2.getTextSize(linie2, font, scale2, th2)
+        tx2 = max(4, min(cx - tw2 // 2, w - tw2 - 4))
+        ty2 = max(20, min(cy + 2, h - 30))
+        cv2.putText(img_rezultat, linie2, (tx2, ty2), font, scale2, (0, 0, 0), th2 + 2, cv2.LINE_AA)
+        cv2.putText(img_rezultat, linie2, (tx2, ty2), font, scale2, (255, 255, 255), th2, cv2.LINE_AA)
+
+        # Linia 3: Perimetru (m)
+        linie3 = f"{int(metrici['perim_m']):,} m"
+        scale3, th3 = 0.55, 1
+        (tw3, _), _ = cv2.getTextSize(linie3, font, scale3, th3)
+        tx3 = max(4, min(cx - tw3 // 2, w - tw3 - 4))
+        ty3 = max(20, min(cy + 24, h - 10))
+        cv2.putText(img_rezultat, linie3, (tx3, ty3), font, scale3, (0, 0, 0), th3 + 2, cv2.LINE_AA)
+        cv2.putText(img_rezultat, linie3, (tx3, ty3), font, scale3, (255, 255, 255), th3, cv2.LINE_AA)
+
         parcele.append(info)
         nr_parcela += 1
 
@@ -1106,9 +1134,9 @@ with tab2:
             masca_minimap = st.checkbox("Mini-harta (stanga jos)",   value=True, key="m_mini")
             masca_text_ui = st.checkbox("Text / logo (dreapta jos)", value=True, key="m_text")
             if metoda == "slic":
-                n_segments = st.slider("Superpixeli SLIC:", 150, 600, 350, 50, key="n_seg",
+                n_segments = st.slider("Superpixeli SLIC:", 150, 600, 320, 50, key="n_seg",
                                        help="Mai multi = granularitate mai fina, mai lent")
-                aspect_max = st.slider("Aspect ratio maxim:", 3.0, 20.0, 14.0, 0.5,
+                aspect_max = st.slider("Aspect ratio maxim:", 3.0, 20.0, 16.0, 0.5,
                                        key="aspect_max_slic")
                 if not SKIMAGE_OK:
                     st.error("scikit-image si scipy nu sunt instalate. "
