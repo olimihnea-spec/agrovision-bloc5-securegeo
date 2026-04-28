@@ -20,14 +20,49 @@ Dacă specifici --gsd (metri/pixel), scriptul calculează și aria în m² și p
 """
 
 import argparse
+import sys
 from pathlib import Path
 
-import cv2
 import numpy as np
-from skimage.segmentation import slic, watershed, find_boundaries
-from skimage.color import rgb2lab
-from skimage.feature import peak_local_max
 from scipy import ndimage as ndi
+
+try:
+    import cv2
+    CV2_OK = True
+except ImportError:
+    CV2_OK = False
+
+try:
+    from skimage.segmentation import slic, watershed, find_boundaries
+    from skimage.color import rgb2lab
+    from skimage.feature import peak_local_max
+    SKIMAGE_OK = True
+except ImportError:
+    SKIMAGE_OK = False
+
+# Daca ruleaza ca pagina Streamlit (nu CLI), afiseaza status dependente
+if "streamlit" in sys.modules:
+    import streamlit as st
+    st.set_page_config(page_title="Detectie Parcele", page_icon="P", layout="wide")
+    st.title("Detectie Parcele Agricole — SLIC + Watershed")
+    st.markdown("""
+**Modul de segmentare parcele agricole din imagini aeriene oblice.**
+
+Foloseste: OpenCV + scikit-image + SLIC superpixels + Watershed + calcul arie/perimetru.
+
+*Aceasta pagina ruleaza in mod CLI. Pentru utilizare in aplicatie, importati functiile direct.*
+""")
+    if not CV2_OK:
+        st.error("opencv-python-headless nu este instalat. Adauga in requirements.txt.")
+    else:
+        st.success("OpenCV disponibil.")
+    if not SKIMAGE_OK:
+        st.error("scikit-image nu este instalat. Adauga in requirements.txt.")
+    else:
+        st.success("scikit-image disponibil.")
+    st.info("Script CLI: `python detect_parcels_unified.py --input imagine.jpg --gsd 0.5`")
+    st.caption("Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu | UCB Targu Jiu | APIA CJ Gorj | © 2026")
+    sys.exit(0)
 
 
 def build_overlay_mask(h: int, w: int,

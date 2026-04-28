@@ -52,6 +52,19 @@ st.sidebar.markdown("""
 - Step 4: NER — entitati cheie
 - Step 5: Raport final export
 """)
+st.sidebar.divider()
+st.sidebar.markdown("""
+<div style='background:#6c3483; border-radius:8px; padding:10px 12px; color:white; font-size:10px; line-height:1.7;'>
+<div style='font-size:11px; font-weight:900; margin-bottom:6px;'>&copy; 2026 Proprietate intelectuala</div>
+<b>Autor:</b> Prof. Asoc. Dr. Oliviu Mihnea Gamulescu<br>
+<b>UCB</b> Targu Jiu | <b>APIA</b> CJ Gorj<br>
+<b>Curs:</b> Master Managementul Riscului in Agricultura<br>
+<b>Lege:</b> Legea nr. 8/1996<br>
+<div style='margin-top:6px; opacity:0.8; font-size:9px;'>
+Material didactic protejat. Reproducerea fara acordul autorului este interzisa.
+</div>
+</div>
+""", unsafe_allow_html=True)
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.markdown("""

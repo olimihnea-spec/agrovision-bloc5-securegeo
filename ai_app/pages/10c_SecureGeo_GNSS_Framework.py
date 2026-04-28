@@ -88,6 +88,19 @@ st.sidebar.markdown("""
 st.sidebar.divider()
 st.sidebar.markdown(f"**Data:** {date.today().strftime('%d.%m.%Y')}")
 st.sidebar.markdown("**Bloc 5 AI Aplicat** | Pagina 10c")
+st.sidebar.divider()
+st.sidebar.markdown("""
+<div style='background:#1a2980; border-radius:8px; padding:10px 12px; color:white; font-size:10px; line-height:1.7;'>
+<div style='font-size:11px; font-weight:900; margin-bottom:6px;'>&copy; 2026 Proprietate intelectuala</div>
+<b>Autor:</b> Prof. Asoc. Dr. Oliviu Mihnea Gamulescu<br>
+<b>UCB</b> Targu Jiu | <b>APIA</b> CJ Gorj<br>
+<b>DOI:</b> 10.5281/zenodo.19829462<br>
+<b>Lege:</b> Legea nr. 8/1996<br>
+<div style='margin-top:6px; opacity:0.8; font-size:9px;'>
+Citare obligatorie la orice utilizare a datelor sau metodologiei.
+</div>
+</div>
+""", unsafe_allow_html=True)
 
 # ─── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -588,8 +601,30 @@ Tag EXIF explicit sau flag metadata la pierdere semnal GPS.
 Gamulescu, O.M. (2026). <i>GNSS Behaviour Under Extreme Altitude Conditions:
 From +11,439 m (Commercial Aviation) to -30 m (Tourist Submarine, Atlantic Ocean) —
 Implications for AI System Data Integrity under GDPR and EU AI Act (Regulation 2024/1689).</i><br>
-<b>Zenodo Preprint.</b> doi: <code>[DOI disponibil dupa upload Zenodo]</code><br>
+<b>Zenodo Preprint.</b> DOI: <a href="https://doi.org/10.5281/zenodo.19829462" target="_blank">10.5281/zenodo.19829462</a><br>
 Target: MDPI Sensors (IF 3.4, Q1) | MDPI Drones (IF 4.8, Q1)
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("""
+<div style='background:linear-gradient(135deg,#1a2980 0%,#26d0ce 100%);
+     border-radius:12px; padding:18px 24px; color:white; margin-top:16px;'>
+<div style='font-size:13px; font-weight:900; letter-spacing:1px; margin-bottom:8px;'>
+    &copy; 2026 — PROPRIETATE INTELECTUALA PROTEJATA
+</div>
+<div style='font-size:12px; line-height:1.8;'>
+    <b>Autor:</b> Prof. Asoc. Dr. Oliviu Mihnea Gamulescu<br>
+    <b>Afiliere:</b> Facultatea de Inginerie, Universitatea Constantin Brancusi Targu Jiu &nbsp;|&nbsp; APIA CJ Gorj<br>
+    <b>Publicatie:</b> Zenodo Preprint 2026 &nbsp;|&nbsp;
+    DOI: <code style='background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;'>10.5281/zenodo.19829462</code><br>
+    <b>Target jurnal:</b> MDPI Sensors (IF 3.4, Q1) &nbsp;|&nbsp; MDPI Drones (IF 4.8, Q1)<br>
+    <b>Date empirice:</b> Zbor Roma (FCO) &rarr; Bucuresti (OTP), 18 aprilie 2026 &nbsp;|&nbsp; Submarin turistic, Atlantic, 6 august 2025<br>
+    <b>Cadru legal:</b> RGPD Art. 5(1)(d) &nbsp;|&nbsp; Regulamentul (UE) 2024/1689 Art. 10(2)(b)
+</div>
+<div style='font-size:10px; margin-top:10px; opacity:0.8;'>
+    Orice utilizare a datelor, metodologiei sau rezultatelor prezentate necesita citarea sursei.
+    Reproducerea fara acordul autorului constituie incalcarea drepturilor de autor conform Legii nr. 8/1996.
+</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -597,5 +632,6 @@ Target: MDPI Sensors (IF 3.4, Q1) | MDPI Drones (IF 4.8, Q1)
         "Pagina 10c — SecureGeo Global Framework | "
         "Bloc 5 AI Aplicat | UCB Targu Jiu | "
         f"Actualizat: {date.today().strftime('%d.%m.%Y')} | "
-        "Prof. Asoc. Dr. Oliviu Mihnea Gamulescu"
+        "Prof. Asoc. Dr. Oliviu Mihnea Gamulescu | "
+        "DOI: 10.5281/zenodo.19829462"
     )

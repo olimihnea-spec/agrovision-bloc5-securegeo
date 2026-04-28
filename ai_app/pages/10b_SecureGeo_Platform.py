@@ -65,6 +65,20 @@ st.sidebar.markdown("""
 st.sidebar.divider()
 st.sidebar.markdown(f"**Data:** {date.today().strftime('%d.%m.%Y')}")
 st.sidebar.markdown("**Bloc 5 AI Aplicat** | Pagina 10b")
+st.sidebar.divider()
+st.sidebar.markdown("""
+<div style='background:#1a5276; border-radius:8px; padding:10px 12px; color:white; font-size:10px; line-height:1.7;'>
+<div style='font-size:11px; font-weight:900; margin-bottom:6px;'>&copy; 2026 Proprietate intelectuala</div>
+<b>Autor:</b> Prof. Asoc. Dr. Oliviu Mihnea Gamulescu<br>
+<b>UCB</b> Targu Jiu | <b>APIA</b> CJ Gorj<br>
+<b>DOI:</b> 10.5281/zenodo.19829462<br>
+<b>Propunere:</b> ACE2-EU UCB, iul. 2026<br>
+<b>Lege:</b> Legea nr. 8/1996<br>
+<div style='margin-top:6px; opacity:0.8; font-size:9px;'>
+Citare obligatorie la orice utilizare a datelor, metodologiei sau rezultatelor.
+</div>
+</div>
+""", unsafe_allow_html=True)
 
 # ─── DATE REALE DIN ZBOR ───────────────────────────────────────────────────────
 # Extrase din EXIF fotografii reale, zbor Roma-Bucuresti, 18 apr 2026
@@ -1002,7 +1016,9 @@ with tab5:
     <div style='background:linear-gradient(135deg,#1a5276 0%,#117a65 100%);
          border-radius:10px; padding:14px 20px; color:white; font-size:12px;'>
         <b>SecureGeo Integrated Platform v1.0</b> | Bloc 5 AI Aplicat — Pagina 10b<br>
-        Prof. Asoc. Dr. Oliviu Mihnea Gamulescu | UCB Targu Jiu | APIA CJ Gorj<br>
-        Propunere ACE2-EU Cybersecurity & Digital Sovereignty | UCB Targu Jiu, 6-8 iulie 2026
+        &copy; 2026 Prof. Asoc. Dr. Oliviu Mihnea Gamulescu | UCB Targu Jiu | APIA CJ Gorj<br>
+        DOI: <code style='background:rgba(255,255,255,0.2); padding:1px 5px; border-radius:3px;'>10.5281/zenodo.19829462</code>
+        &nbsp;|&nbsp; Propunere ACE2-EU Cybersecurity &amp; Digital Sovereignty | UCB Targu Jiu, 6-8 iulie 2026<br>
+        <span style='font-size:10px; opacity:0.8;'>Orice utilizare a datelor sau metodologiei necesita citarea sursei. Legea nr. 8/1996.</span>
     </div>
     """, unsafe_allow_html=True)
