@@ -12,6 +12,14 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, date
+import io, math
+
+try:
+    from PIL import Image as PILImage
+    from PIL.ExifTags import TAGS, GPSTAGS
+    PIL_OK = True
+except ImportError:
+    PIL_OK = False
 
 try:
     import plotly.graph_objects as go
@@ -20,6 +28,109 @@ try:
     PLOTLY_OK = True
 except ImportError:
     PLOTLY_OK = False
+
+# ─── HELPER FUNCTIONS TAB D ───────────────────────────────────────────────────
+
+def _safe_f(val):
+    try:
+        if hasattr(val, 'numerator'):
+            return float(val.numerator) / float(val.denominator)
+        return float(val)
+    except:
+        return None
+
+def _dms_dd(dms, ref):
+    try:
+        d = _safe_f(dms[0]) or 0
+        m = _safe_f(dms[1]) or 0
+        s = _safe_f(dms[2]) or 0
+        dd = d + m/60 + s/3600
+        if isinstance(ref, bytes):
+            ref = ref.decode('ascii', errors='ignore').strip('\x00')
+        if ref in ['S', 'W']:
+            dd = -dd
+        return round(dd, 7)
+    except:
+        return None
+
+def _alt_m(gps_data):
+    try:
+        alt = gps_data.get('GPSAltitude')
+        if alt is None:
+            return None
+        alt_m = _safe_f(alt)
+        ref = gps_data.get('GPSAltitudeRef', 0)
+        if ref == b'\x01' or ref == 1:
+            alt_m = -alt_m
+        return round(alt_m, 2) if alt_m is not None else None
+    except:
+        return None
+
+def _approx_geoid(lat, lon):
+    """Aproximare grosiera ondulare geoid EGM96 (eroare ±15m — doar pentru indicatie)."""
+    if lat is None or lon is None:
+        return 25.0
+    lat_r = math.radians(lat)
+    lon_r = math.radians(lon)
+    N = (25 * math.cos(lat_r)
+         - 5 * math.cos(2 * lat_r)
+         + 8 * math.cos(lon_r) * math.cos(lat_r)
+         + 5)
+    return round(N, 1)
+
+def _eval_agri_geo_d(has_gps, lat_dd, lon_dd, alt_m, all_exif, phantom_score):
+    results = []
+    results.append(("AG-1", "Georef. Offline", "N/A",
+        "Nu se poate determina offline capability dintr-o fotografie izolata.", "#6c757d"))
+    if has_gps and alt_m is not None and all_exif.get('DateTimeOriginal'):
+        ag2_s, ag2_c = "DA", "#27ae60"
+        ag2_d = f"Lat + Lon + Alt ({alt_m}m) + DateTime prezente in EXIF"
+    elif has_gps and alt_m is None:
+        ag2_s, ag2_c = "PARTIAL", "#e67e22"
+        ag2_d = "Lat + Lon prezente, ALTITUDINEA lipseste din EXIF"
+    elif has_gps:
+        ag2_s, ag2_c = "PARTIAL", "#e67e22"
+        ag2_d = "GPS prezent dar EXIF incomplet (alt sau datetime absent)"
+    else:
+        ag2_s, ag2_c = "NU", "#c0392b"
+        ag2_d = "GPS absent din EXIF"
+    results.append(("AG-2", "EXIF Complet", ag2_s, ag2_d, ag2_c))
+    results.append(("AG-3", "Conformitate GDPR", "N/A",
+        "Conformitatea GDPR a aplicatiei nu se poate evalua dintr-o fotografie.", "#6c757d"))
+    gps_dop = all_exif.get('GPSDOP')
+    if gps_dop:
+        dop_val = _safe_f(gps_dop)
+        if dop_val and dop_val <= 2:
+            results.append(("AG-4", "Acuratete GPS", "DA",
+                f"PDOP = {dop_val:.1f} (excelent)", "#27ae60"))
+        elif dop_val and dop_val <= 5:
+            results.append(("AG-4", "Acuratete GPS", "PARTIAL",
+                f"PDOP = {dop_val:.1f} (acceptabil)", "#e67e22"))
+        else:
+            results.append(("AG-4", "Acuratete GPS", "NU",
+                f"PDOP = {dop_val:.1f} (slab, >5)", "#c0392b"))
+    else:
+        results.append(("AG-4", "Acuratete GPS", "N/A",
+            "Tag GPSDOP absent — acuratete nedeterminabila din EXIF", "#6c757d"))
+    results.append(("AG-5", "Interoperabilitate", "N/A",
+        "Nu se evalueaza dintr-o fotografie izolata.", "#6c757d"))
+    if not has_gps:
+        results.append(("AG-6", "Divulg. GNSS", "N/A", "Fara GPS.", "#6c757d"))
+    elif phantom_score >= 60:
+        results.append(("AG-6", "Divulg. GNSS", "NU",
+            "CRITIC: indicatori puternici phantom — pierdere semnal nedivulgata", "#c0392b"))
+    elif phantom_score >= 35:
+        results.append(("AG-6", "Divulg. GNSS", "NU",
+            "ATENTIE: indicatori moderati phantom — verificare manuala necesara", "#e67e22"))
+    elif alt_m is None:
+        results.append(("AG-6", "Divulg. GNSS", "PARTIAL",
+            "Altitudine absenta — AG-6 nu se poate confirma", "#e67e22"))
+    else:
+        results.append(("AG-6", "Divulg. GNSS", "DA",
+            "Niciun indicator phantom detectat — date GPS aparent valide", "#27ae60"))
+    return results
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="SecureGeo Global Framework",
@@ -143,12 +254,13 @@ with c5:
 st.divider()
 
 # ─── TABS ──────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Zbor Aviatie (+11.439 m)",
     "Submarin Tenerife (-30 m)",
     "GPS Fantoma — Descoperire",
     "AGRI-GEO Framework (6 criterii)",
-    "Implicatii GDPR + Actul AI"
+    "Implicatii GDPR + Actul AI",
+    "D — Analizator Fotografie"
 ])
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -635,3 +747,505 @@ Target: MDPI Sensors (IF 3.4, Q1) | MDPI Drones (IF 4.8, Q1)
         "Prof. Asoc. Dr. Oliviu Mihnea Gamulescu | "
         "DOI: 10.5281/zenodo.19829462"
     )
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 6 — PUNCT D: ANALIZATOR FOTOGRAFIE GEOREFERENTIATA
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab6:
+    st.subheader("Punct D — Analizator Fotografie Georeferentiata")
+    st.caption(
+        "Incarca orice fotografie georeferentiata: analiza EXIF completa, "
+        "detectie phantom geolocation, conformitate GDPR + Actul AI, evaluare AGRI-GEO AG-1...AG-6"
+    )
+
+    if not PIL_OK:
+        st.error("Libraria Pillow nu este disponibila. Instalare: pip install Pillow>=10.0.0")
+    else:
+        up_file = st.file_uploader(
+            "Incarca fotografie georeferentiata (JPG / JPEG / PNG)",
+            type=["jpg", "jpeg", "png"],
+            help="Fotografii realizate cu: Timestamp Camera, GPS Camera, Note Cam, GeoFoto, Angle Cam, camera standard."
+        )
+
+        if up_file is None:
+            st.info("Incarca o fotografie pentru analiza completa EXIF.")
+            st.markdown("""
+**Ce detecteaza analizatorul:**
+- Coordonate GPS (lat, lon, altitudine WGS84) din EXIF
+- **Phantom geolocation** — geolocalizare fantoma (risc AG-6)
+- Conformitate **GDPR Art. 5(1)(d)** — exactitate date de localizare
+- Conformitate **Actul AI Art. 10(2)(b)** — calitate date pentru sisteme AI
+- Evaluare **AGRI-GEO** (AG-1...AG-6)
+- Comparare coordonate **vizibile pe fotografie** vs. **EXIF invizibil**
+
+**Cum functioneaza detectia phantom:**
+1. Extrage altitudinea WGS84 din EXIF
+2. Compara cu nivelul marii estimat la acea locatie (geoid EGM96 aproximat)
+3. Verifica consistenta timestamp imagine vs. GPS timestamp
+4. Calculeaza scor de risc (0-100)
+""")
+        else:
+            try:
+                img_bytes = up_file.read()
+                pil_img = PILImage.open(io.BytesIO(img_bytes))
+
+                # ── EXTRACTIE EXIF ─────────────────────────────────────────────
+                exif_raw = pil_img.getexif()
+                all_exif = {}
+                for tag_id, val in exif_raw.items():
+                    tag_name = TAGS.get(tag_id, str(tag_id))
+                    all_exif[tag_name] = val
+
+                gps_block = exif_raw.get_ifd(0x8825)
+                gps_data = {}
+                if gps_block:
+                    for k, v in gps_block.items():
+                        gps_data[GPSTAGS.get(k, k)] = v
+
+                lat_dd = lon_dd = alt_m = None
+                gps_ts_str = "—"
+                gps_date_str = str(gps_data.get("GPSDateStamp", "—"))
+                img_dt_str = str(all_exif.get("DateTimeOriginal", all_exif.get("DateTime", "—")))
+                alt_ref_val = gps_data.get("GPSAltitudeRef", None)
+
+                if gps_data.get("GPSLatitude") and gps_data.get("GPSLatitudeRef"):
+                    lat_dd = _dms_dd(gps_data["GPSLatitude"], gps_data["GPSLatitudeRef"])
+                if gps_data.get("GPSLongitude") and gps_data.get("GPSLongitudeRef"):
+                    lon_dd = _dms_dd(gps_data["GPSLongitude"], gps_data["GPSLongitudeRef"])
+                if gps_data.get("GPSAltitude") is not None:
+                    alt_m = _alt_m(gps_data)
+
+                if gps_data.get("GPSTimeStamp"):
+                    ts = gps_data["GPSTimeStamp"]
+                    try:
+                        h = int(_safe_f(ts[0]) or 0)
+                        mn = int(_safe_f(ts[1]) or 0)
+                        sc = _safe_f(ts[2]) or 0.0
+                        gps_ts_str = f"{h:02d}:{mn:02d}:{sc:05.2f} UTC"
+                    except:
+                        gps_ts_str = str(ts)
+
+                has_gps = (lat_dd is not None and lon_dd is not None)
+
+                # ── ROW 1: IMAGINE + DATE GPS ────────────────────────────────
+                col_img, col_gps = st.columns([1, 1])
+                with col_img:
+                    st.markdown("**Fotografie incarcata:**")
+                    st.image(img_bytes, use_column_width=True)
+                    st.caption(f"{pil_img.width} x {pil_img.height} px | {up_file.name}")
+
+                with col_gps:
+                    st.markdown("**Date GPS din EXIF (invizibile omului):**")
+                    if has_gps:
+                        m1, m2, m3 = st.columns(3)
+                        m1.metric("Latitudine", f"{lat_dd:.5f}°")
+                        m2.metric("Longitudine", f"{lon_dd:.5f}°")
+                        if alt_m is not None:
+                            m3.metric("Altitudine", f"{alt_m:.1f} m")
+                        else:
+                            m3.metric("Altitudine", "ABSENT")
+
+                        alt_ref_label = "0x00 (deasupra marii)"
+                        if alt_ref_val == b'\x01' or alt_ref_val == 1:
+                            alt_ref_label = "0x01 (sub nivelul marii)"
+
+                        st.markdown(f"""
+| Camp EXIF | Valoare |
+|-----------|---------|
+| GPSLatitude | `{lat_dd:.7f}°` |
+| GPSLongitude | `{lon_dd:.7f}°` |
+| GPSAltitude | `{f"{alt_m:.2f} m WGS84" if alt_m is not None else "ABSENT"}` |
+| GPSAltitudeRef | `{alt_ref_label}` |
+| GPSTimeStamp | `{gps_ts_str}` |
+| GPSDateStamp | `{gps_date_str}` |
+| DateTimeOriginal | `{img_dt_str}` |
+""")
+                    else:
+                        st.error("GPS absent din EXIF — fotografia nu contine coordonate GPS")
+                        st.markdown("**Implicatii:** AG-2: NU | GDPR: N/A | AG-6: N/A")
+
+                # ── HARTA GPS ─────────────────────────────────────────────────
+                if has_gps and PLOTLY_OK:
+                    st.divider()
+                    st.markdown("**Harta — locatia GPS din EXIF:**")
+                    fig_map = go.Figure()
+                    fig_map.add_trace(go.Scattergeo(
+                        lat=[lat_dd], lon=[lon_dd],
+                        mode="markers",
+                        marker=dict(size=18, color="#c0392b",
+                                    line=dict(width=2, color="white")),
+                        text=[f"EXIF GPS<br>{lat_dd:.6f}°N<br>{lon_dd:.6f}°E<br>Alt: {alt_m}m"],
+                        hoverinfo="text", name="Locatie EXIF"
+                    ))
+                    fig_map.update_layout(
+                        geo=dict(
+                            showland=True, landcolor="#f5f5f0",
+                            showocean=True, oceancolor="#d0e8ff",
+                            showcoastlines=True, coastlinecolor="#aaa",
+                            center=dict(lat=lat_dd, lon=lon_dd),
+                            projection_scale=10
+                        ),
+                        height=280, margin=dict(l=0, r=0, t=0, b=0),
+                        title=f"Coordonate GPS EXIF: {lat_dd:.4f}°N, {lon_dd:.4f}°E"
+                    )
+                    st.plotly_chart(fig_map, use_container_width=True)
+
+                # ── TABEL EXIF COMPLET ─────────────────────────────────────────
+                st.divider()
+                with st.expander("Tabel EXIF complet (toate tagurile detectate)", expanded=False):
+                    exif_rows = []
+                    for k, v in sorted(all_exif.items()):
+                        if k in ("MakerNote", "UserComment"):
+                            continue
+                        try:
+                            vs = str(v)[:250]
+                        except:
+                            vs = "—"
+                        exif_rows.append({"Tag EXIF": k, "Valoare": vs})
+                    for k, v in sorted(gps_data.items()):
+                        try:
+                            vs = str(v)[:250]
+                        except:
+                            vs = "—"
+                        exif_rows.append({"Tag EXIF": f"GPS.{k}", "Valoare": vs})
+                    if exif_rows:
+                        st.dataframe(pd.DataFrame(exif_rows),
+                                     hide_index=True, use_container_width=True)
+                    else:
+                        st.warning("Nu au fost detectate taguri EXIF in aceasta fotografie.")
+
+                # ── DETECTIE PHANTOM GEOLOCATION ──────────────────────────────
+                st.divider()
+                st.markdown("### Detectie Phantom Geolocation (AG-6)")
+                st.caption("Analiza bazata pe altitudine WGS84, consistenta timestamp si precizie GPS.")
+
+                phantom_risks = []
+                phantom_score = 0
+
+                if not has_gps:
+                    phantom_risks.append(("INFO", "Fara date GPS — phantom geolocation nu se aplica"))
+                else:
+                    if alt_m is None:
+                        phantom_risks.append(("ATENTIE",
+                            "Altitudinea lipseste din EXIF — nu se poate verifica phantom (AG-2: NU)"))
+                        phantom_score += 20
+                    elif alt_m == 0.0:
+                        phantom_risks.append(("RIDICAT",
+                            "Altitudine = 0,0 m exacta — posibil Faza 4 (recuperare GPS dupa pierdere semnal, "
+                            "documentata in cercetarea SecureGeo)"))
+                        phantom_score += 65
+                    elif 25.0 <= alt_m <= 70.0:
+                        N_est = _approx_geoid(lat_dd, lon_dd)
+                        diff = abs(alt_m - N_est)
+                        if diff < 12:
+                            phantom_risks.append(("ATENTIE",
+                                f"Altitudine {alt_m}m WGS84 ≈ nivel marii estimat la aceasta locatie "
+                                f"(~{N_est:.0f}m geoid EGM96 aproximat, eroare ±15m). "
+                                "Daca fotografia a fost realizata in mediu subacvatic sau in zona fara semnal GPS, "
+                                "poate fi phantom geolocation (similar Faza 3 — experiment Tenerife)."))
+                            phantom_score += 40
+                        else:
+                            phantom_risks.append(("OK",
+                                f"Altitudine {alt_m}m WGS84. Geoid estimat: {N_est:.0f}m. "
+                                "Diferenta: {diff:.0f}m — nu corespunde tiparului phantom.".format(diff=diff)))
+                    elif alt_m > 5000:
+                        phantom_risks.append(("ATENTIE",
+                            f"Altitudine {alt_m:.0f}m — domeniu aviatie. "
+                            "Daca fotografia nu a fost realizata in avion, poate fi phantom geolocation."))
+                        phantom_score += 35
+                    elif alt_m < -5:
+                        phantom_risks.append(("INFO",
+                            f"Altitudine negativa {alt_m:.1f}m WGS84 (GPSAltitudeRef=0x01). "
+                            "Posibila fotografie subacvatica cu semnal GPS partial."))
+                        phantom_score += 20
+                    else:
+                        phantom_risks.append(("OK",
+                            f"Altitudine {alt_m:.1f}m WGS84 — in domeniu normal terestru"))
+
+                    # Verificare timestamp
+                    if img_dt_str != "—" and gps_date_str != "—" and gps_ts_str != "—":
+                        try:
+                            img_dt = datetime.strptime(img_dt_str[:19], "%Y:%m:%d %H:%M:%S")
+                            gps_full = f"{gps_date_str} {gps_ts_str[:8]}"
+                            gps_dt = datetime.strptime(gps_full, "%Y:%m:%d %H:%M:%S")
+                            diff_s = abs((img_dt - gps_dt).total_seconds())
+                            if diff_s > 120:
+                                phantom_risks.append(("ATENTIE",
+                                    f"Diferenta timestamp imagine vs GPS: {diff_s:.0f} secunde "
+                                    "(normal < 30s). Posibila inconsistenta sau fus orar incorect."))
+                                phantom_score += 25
+                            elif diff_s > 30:
+                                phantom_risks.append(("INFO",
+                                    f"Diferenta timestamp: {diff_s:.0f}s "
+                                    "(acceptabil dar verifica fusul orar)"))
+                            else:
+                                phantom_risks.append(("OK",
+                                    f"Timestamp imagine vs GPS: diferenta {diff_s:.0f}s — consistent"))
+                        except:
+                            phantom_risks.append(("INFO",
+                                "Timestamp-urile nu au putut fi comparate (format neasteptat)"))
+
+                    # Verificare precizie GPS
+                    if lat_dd is not None:
+                        lat_str = f"{abs(lat_dd):.10f}".rstrip('0')
+                        decimals = len(lat_str.split('.')[-1]) if '.' in lat_str else 0
+                        if decimals < 3:
+                            phantom_risks.append(("ATENTIE",
+                                f"Precizie GPS scazuta: {decimals} zecimale semnificative "
+                                "(normal 6-7). Posibil coordonate cache sau interpolare."))
+                            phantom_score += 15
+                        else:
+                            phantom_risks.append(("OK",
+                                f"Precizie GPS: {decimals} zecimale semnificative — normal"))
+
+                # Scor -> nivel
+                if phantom_score >= 60:
+                    risk_label, risk_color, risk_bg = "CRITIC", "#c0392b", "#fadbd8"
+                elif phantom_score >= 40:
+                    risk_label, risk_color, risk_bg = "RIDICAT", "#e67e22", "#fdebd0"
+                elif phantom_score >= 15:
+                    risk_label, risk_color, risk_bg = "MEDIU", "#f39c12", "#fef9e7"
+                else:
+                    risk_label, risk_color, risk_bg = "SCAZUT", "#27ae60", "#eafaf1"
+
+                col_r, col_ind = st.columns([1, 2])
+                with col_r:
+                    st.markdown(f"""
+<div style="background:{risk_bg};border:2px solid {risk_color};border-radius:12px;
+     padding:20px;text-align:center;">
+<div style="font-size:2.4rem;font-weight:900;color:{risk_color};">{risk_label}</div>
+<div style="font-size:0.85rem;color:#555;margin-top:6px;">
+Risc Phantom Geolocation<br>Scor intern: {phantom_score}/100
+</div>
+</div>
+""", unsafe_allow_html=True)
+                    st.markdown("""
+**Legende scoruri:**
+- **SCAZUT (0-14)**: Date GPS consistente
+- **MEDIU (15-39)**: Un indicator suspect
+- **RIDICAT (40-59)**: Indicatori multipli
+- **CRITIC (60+)**: Phantom confirmat sau probabil
+""")
+
+                with col_ind:
+                    st.markdown("**Indicatori detectati:**")
+                    icon_map = {
+                        "OK": ("#27ae60", "#eafaf1", "OK"),
+                        "ATENTIE": ("#e67e22", "#fef9e7", "ATENTIE"),
+                        "RIDICAT": ("#c0392b", "#fadbd8", "RIDICAT"),
+                        "INFO": ("#6c757d", "#f8f9fa", "INFO"),
+                    }
+                    for status, msg in phantom_risks:
+                        c_, bg_, lbl_ = icon_map.get(status, ("#6c757d", "#f8f9fa", status))
+                        st.markdown(
+                            f"<div style='background:{bg_};border-left:4px solid {c_};"
+                            f"padding:8px 12px;margin:4px 0;border-radius:4px;'>"
+                            f"<b style='color:{c_};'>{lbl_}</b> — {msg}</div>",
+                            unsafe_allow_html=True
+                        )
+
+                # ── COMPARARE COORDONATE VIZIBILE vs EXIF ─────────────────────
+                st.divider()
+                st.markdown("### Comparare Coordonate Vizibile pe Fotografie vs. EXIF Invizibil")
+                st.caption(
+                    "Multe aplicatii (Timestamp Camera, Note Cam, Location on Photo) suprapun "
+                    "coordonatele GPS ca TEXT pe imagine. Introdu valorile pe care le citesti "
+                    "vizual pentru comparatie cu EXIF-ul invizibil."
+                )
+
+                col_photo2, col_cmp = st.columns([1, 1])
+                with col_photo2:
+                    st.markdown("**Fotografia ta (zoom pentru text suprapus):**")
+                    st.image(img_bytes, use_column_width=True)
+
+                with col_cmp:
+                    st.markdown("**Coordonatele vizibile pe fotografie:**")
+                    vis_lat = st.text_input(
+                        "Latitudine citita vizual (ex: 44.575667)", key="vl_d")
+                    vis_lon = st.text_input(
+                        "Longitudine citita vizual (ex: 26.094084)", key="vln_d")
+                    vis_alt = st.text_input(
+                        "Altitudine citita vizual (ex: 135.1)", key="va_d")
+
+                    if vis_lat and vis_lon:
+                        try:
+                            vl = float(vis_lat)
+                            vln = float(vis_lon)
+                            va = float(vis_alt) if vis_alt else None
+
+                            rows_c = []
+                            if lat_dd is not None:
+                                d_lat = abs(vl - lat_dd)
+                                rows_c.append({
+                                    "Camp": "Latitudine",
+                                    "EXIF (invizibil)": f"{lat_dd:.6f}°",
+                                    "Vizibil pe foto": f"{vl:.6f}°",
+                                    "Delta": f"{d_lat * 111320:.1f} m",
+                                    "Status": "OK" if d_lat < 0.0002 else "DIFERENTA!"
+                                })
+                            if lon_dd is not None:
+                                d_lon = abs(vln - lon_dd)
+                                cos_lat = math.cos(math.radians(lat_dd or 0))
+                                rows_c.append({
+                                    "Camp": "Longitudine",
+                                    "EXIF (invizibil)": f"{lon_dd:.6f}°",
+                                    "Vizibil pe foto": f"{vln:.6f}°",
+                                    "Delta": f"{d_lon * 111320 * cos_lat:.1f} m",
+                                    "Status": "OK" if d_lon < 0.0002 else "DIFERENTA!"
+                                })
+                            if va is not None and alt_m is not None:
+                                d_alt = abs(va - alt_m)
+                                rows_c.append({
+                                    "Camp": "Altitudine",
+                                    "EXIF (invizibil)": f"{alt_m:.1f} m",
+                                    "Vizibil pe foto": f"{va:.1f} m",
+                                    "Delta": f"{d_alt:.1f} m",
+                                    "Status": "OK" if d_alt < 10 else "DIFERENTA!"
+                                })
+
+                            if rows_c:
+                                df_cmp = pd.DataFrame(rows_c)
+                                st.dataframe(df_cmp, hide_index=True,
+                                             use_container_width=True)
+                                if all(r["Status"] == "OK" for r in rows_c):
+                                    st.success(
+                                        "Coordonatele vizibile si EXIF sunt consistente. "
+                                        "NOTA: Consistenta nu exclude phantom geolocation daca "
+                                        "AMBELE surse sunt afectate simultan (pattern Faza 3).")
+                                else:
+                                    st.error(
+                                        "DIFERENTA intre coordonatele vizibile si EXIF! "
+                                        "Posibila eroare de scriere EXIF sau manipulare metadata.")
+                        except ValueError:
+                            st.warning("Introdu valori numerice valide.")
+
+                # ── EVALUARE AGRI-GEO ────────────────────────────────────────
+                st.divider()
+                st.markdown("### Evaluare AGRI-GEO Framework (AG-1...AG-6)")
+                ag_results = _eval_agri_geo_d(has_gps, lat_dd, lon_dd, alt_m,
+                                               all_exif, phantom_score)
+                cols_ag = st.columns(3)
+                for idx, (ag_cod, ag_titlu, ag_status, ag_det, ag_col) in enumerate(ag_results):
+                    bg_ag = ("#eafaf1" if ag_status == "DA" else
+                             "#fef9e7" if ag_status == "PARTIAL" else
+                             "#fadbd8" if ag_status == "NU" else "#f8f9fa")
+                    with cols_ag[idx % 3]:
+                        st.markdown(f"""
+<div style="background:{bg_ag};border:2px solid {ag_col};border-radius:10px;
+     padding:12px;margin-bottom:10px;">
+<div style="font-size:1rem;font-weight:900;color:{ag_col};">{ag_cod}</div>
+<div style="font-size:0.8rem;font-weight:700;">{ag_titlu}</div>
+<div style="font-size:1.2rem;font-weight:900;color:{ag_col};margin:4px 0;">
+{ag_status}</div>
+<div style="font-size:0.72rem;color:#555;">{ag_det}</div>
+</div>
+""", unsafe_allow_html=True)
+
+                # ── GDPR + ACTUL AI ──────────────────────────────────────────
+                st.divider()
+                col_gdpr, col_ai = st.columns(2)
+                with col_gdpr:
+                    st.markdown("### GDPR — Art. 5(1)(d)")
+                    if not has_gps:
+                        st.info("Fara GPS — Art. 5(1)(d) nu se aplica.")
+                    elif phantom_score >= 40:
+                        st.error(
+                            "**Risc de incalcare Art. 5(1)(d)**\n\n"
+                            "Datele GPS prezinta indicatori de inexactitate (phantom geolocation). "
+                            "Operatorul are obligatia de a verifica si rectifica datele inainte de "
+                            "utilizare in procese administrative sau juridice.")
+                    elif phantom_score >= 15:
+                        st.warning(
+                            "**Risc mediu Art. 5(1)(d)**\n\n"
+                            "Indicatori moderati de inexactitate. Se recomanda validare independenta.")
+                    else:
+                        st.success(
+                            "**Fara indicatori de incalcare Art. 5(1)(d)**\n\n"
+                            "Date GPS aparent exacte. Se recomanda validare independenta pentru "
+                            "procese cu relevanta juridica.")
+
+                with col_ai:
+                    st.markdown("### Actul AI — Art. 10(2)(b)")
+                    if alt_m is None and has_gps:
+                        st.warning(
+                            "**Date incomplete — Art. 10(2)(b)**\n\n"
+                            "Altitudinea lipseste din EXIF. Date GPS incomplete pot "
+                            "afecta calitatea seturilor de date pentru sisteme AI de risc ridicat "
+                            "(Anexa III pct. 5(a), obligatoriu aug. 2026).")
+                    elif phantom_score >= 40:
+                        st.error(
+                            "**Risc la calitatea datelor — Art. 10(2)(b)**\n\n"
+                            "Indicatori phantom geolocation detectati. Aceste date introduse "
+                            "in sisteme AI pot genera clasificari eronate — cerinta 'fara erori' "
+                            "nu este satisfacuta.")
+                    elif not has_gps:
+                        st.warning(
+                            "**GPS absent — Art. 10(2)(b)**\n\n"
+                            "Fara coordonate GPS, datele sunt incomplete pentru sisteme AI "
+                            "de inspectie teren.")
+                    else:
+                        st.success(
+                            "**Date consistente — Art. 10(2)(b)**\n\n"
+                            "GPS complet si consistent. Date aparent utilizabile in "
+                            "sisteme AI de inspectie teren.")
+
+                # ── RAPORT COMPLET ───────────────────────────────────────────
+                st.divider()
+                st.markdown("### Raport Complet de Analiza")
+
+                report_lines = [
+                    "=" * 60,
+                    "RAPORT ANALIZA EXIF — SecureGeo AGRI-GEO Framework",
+                    "Cadru: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu",
+                    "DOI cercetare: 10.5281/zenodo.19829462",
+                    f"Data analiza: {date.today().strftime('%d.%m.%Y')}",
+                    "=" * 60,
+                    f"Fisier: {up_file.name}",
+                    f"Dimensiune: {pil_img.width}x{pil_img.height} px",
+                    "-" * 40,
+                    "DATE GPS EXIF:",
+                    f"  Latitudine:       {f'{lat_dd:.7f} deg' if lat_dd else 'ABSENT'}",
+                    f"  Longitudine:      {f'{lon_dd:.7f} deg' if lon_dd else 'ABSENT'}",
+                    f"  Altitudine WGS84: {f'{alt_m:.2f} m' if alt_m is not None else 'ABSENT'}",
+                    f"  GPS Timestamp:    {gps_ts_str}",
+                    f"  GPS DateStamp:    {gps_date_str}",
+                    f"  DateTimeOriginal: {img_dt_str}",
+                    "-" * 40,
+                    f"RISC PHANTOM GEOLOCATION: {risk_label} (scor: {phantom_score}/100)",
+                    "Indicatori:",
+                ]
+                for status, msg in phantom_risks:
+                    report_lines.append(f"  [{status}] {msg}")
+                report_lines.extend([
+                    "-" * 40,
+                    "EVALUARE AGRI-GEO:",
+                ])
+                for ag_cod, ag_titlu, ag_status, ag_det, _ in ag_results:
+                    report_lines.append(f"  {ag_cod} - {ag_titlu}: {ag_status}")
+                    report_lines.append(f"    {ag_det}")
+                report_lines.extend([
+                    "-" * 40,
+                    "CONFORMITATE NORMATIVA:",
+                    f"  GDPR Art. 5(1)(d): {'RISC' if phantom_score >= 40 else 'OK'}",
+                    f"  Actul AI Art. 10(2)(b): {'RISC' if (phantom_score >= 40 or (has_gps and alt_m is None)) else 'OK'}",
+                    "=" * 60,
+                    "NOTA: Raport generat automat din metadata EXIF.",
+                    "Concluziile definitive necesita validare umana.",
+                    "Referinta: Gamulescu O.M. (2026), doi:10.5281/zenodo.19829462",
+                    "=" * 60,
+                ])
+
+                report_text = "\n".join(report_lines)
+                with st.expander("Vizualizeaza raportul complet", expanded=True):
+                    st.code(report_text, language="")
+
+                st.download_button(
+                    label="Descarca Raport TXT",
+                    data=report_text.encode("utf-8"),
+                    file_name=f"raport_exif_{up_file.name.replace('.', '_')}.txt",
+                    mime="text/plain"
+                )
+
+            except Exception as exc:
+                st.error(f"Eroare la procesarea fotografiei: {exc}")
+                st.info("Asigura-te ca fisierul este o fotografie JPG/JPEG/PNG valida cu date EXIF.")
