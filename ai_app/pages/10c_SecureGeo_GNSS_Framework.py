@@ -219,12 +219,13 @@ st.markdown("""
     <h1>SecureGeo Global Framework</h1>
     <p>Comportamentul GNSS in conditii extreme: de la +11.439 m (aviatie comerciala)
     la -30 m (submarin turistic, Oceanul Atlantic, Tenerife)<br>
+    Studiu tri-continental: Romania | Tenerife (Atlantic) | Dubai + Abu Dhabi (Golf Persic)<br>
     Implicatii pentru integritatea datelor in sisteme AI — GDPR + Regulamentul UE 2024/1689</p>
 </div>
 """, unsafe_allow_html=True)
 
 # ─── METRICI CHEIE ─────────────────────────────────────────────────────────────
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 with c1:
     st.markdown("""<div class="metric-card">
     <div class="val">11.469</div>
@@ -232,20 +233,25 @@ with c1:
     </div>""", unsafe_allow_html=True)
 with c2:
     st.markdown("""<div class="metric-card">
-    <div class="val">924</div>
-    <div class="lbl">fotografii EXIF<br>analizate (2 experimente)</div>
+    <div class="val">1.406</div>
+    <div class="lbl">fotografii EXIF<br>analizate total</div>
     </div>""", unsafe_allow_html=True)
 with c3:
     st.markdown("""<div class="metric-card">
-    <div class="val" style="color:#c0392b;">243</div>
-    <div class="lbl">fotografii cu GPS<br>fantoma (49 min)</div>
+    <div class="val" style="color:#c0392b;">326+</div>
+    <div class="lbl">fotografii GPS<br>fantoma confirmate</div>
     </div>""", unsafe_allow_html=True)
 with c4:
     st.markdown("""<div class="metric-card">
-    <div class="val">48,5 m</div>
-    <div class="lbl">valoare fantoma<br>inghetata WGS84</div>
+    <div class="val">70 m</div>
+    <div class="lbl">diferenta geoid<br>Tenerife vs Abu Dhabi</div>
     </div>""", unsafe_allow_html=True)
 with c5:
+    st.markdown("""<div class="metric-card">
+    <div class="val">3</div>
+    <div class="lbl">continente<br>studiate</div>
+    </div>""", unsafe_allow_html=True)
+with c6:
     st.markdown("""<div class="metric-card">
     <div class="val">6</div>
     <div class="lbl">criterii AGRI-GEO<br>Framework propuse</div>
@@ -254,13 +260,14 @@ with c5:
 st.divider()
 
 # ─── TABS ──────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Zbor Aviatie (+11.439 m)",
     "Submarin Tenerife (-30 m)",
     "GPS Fantoma — Descoperire",
     "AGRI-GEO Framework (6 criterii)",
     "Implicatii GDPR + Actul AI",
-    "D — Analizator Fotografie"
+    "D — Analizator Fotografie",
+    "E — Dubai + Abu Dhabi Global"
 ])
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1249,3 +1256,341 @@ Risc Phantom Geolocation<br>Scor intern: {phantom_score}/100
             except Exception as exc:
                 st.error(f"Eroare la procesarea fotografiei: {exc}")
                 st.info("Asigura-te ca fisierul este o fotografie JPG/JPEG/PNG valida cu date EXIF.")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 7 — DUBAI + ABU DHABI GLOBAL
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab7:
+    st.subheader("Studiu Tri-Continental — Dubai + Abu Dhabi, Decembrie 2025")
+    st.caption("Samsung Galaxy A72 (SM-A725F) | 482 fotografii JPG analizate | Golf Persic, EAU")
+
+    st.markdown("""
+<div class="finding-box">
+<b>Descoperire noua (3 mai 2026):</b> Fenomenul GPS Fantoma a fost confirmat si in Golful Persic (Abu Dhabi,
+Dubai) — demonstrand ca fenomenul este <b>global, nu local</b>. Geoidul EGM96 are valori <b>negative</b>
+in zona Golfului Persic (N ≈ −27 m la Abu Dhabi, N ≈ −33 m la Dubai), in contrast cu
+valoarea <b>pozitiva</b> de la Tenerife (N ≈ +48 m). Diferenta maxima confirmata empiric: <b>70 m</b>
+intre cele doua zone — acelasi nivel al marii, valori WGS84 radical diferite.
+</div>
+""", unsafe_allow_html=True)
+
+    st.divider()
+
+    # ─── METRICI TAB 7 ───────────────────────────────────────────────────────────
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.markdown("""<div class="metric-card">
+        <div class="val">482</div>
+        <div class="lbl">JPG analizate<br>Dubai + Abu Dhabi</div>
+        </div>""", unsafe_allow_html=True)
+    with m2:
+        st.markdown("""<div class="metric-card">
+        <div class="val" style="color:#c0392b;">8</div>
+        <div class="lbl">secvente GPS Fantoma<br>Abu Dhabi (max 24 foto)</div>
+        </div>""", unsafe_allow_html=True)
+    with m3:
+        st.markdown("""<div class="metric-card">
+        <div class="val">433,9 m</div>
+        <div class="lbl">altitudine max WGS84<br>Burj Khalifa etaj 124</div>
+        </div>""", unsafe_allow_html=True)
+    with m4:
+        st.markdown("""<div class="metric-card">
+        <div class="val" style="color:#e67e22;">−67,7 m</div>
+        <div class="lbl">altitudine min WGS84<br>subsol Dubai Mall</div>
+        </div>""", unsafe_allow_html=True)
+
+    st.divider()
+
+    # ─── SECTIUNI ────────────────────────────────────────────────────────────────
+    sec1, sec2, sec3 = st.tabs([
+        "Abu Dhabi — GPS Fantoma confirmat",
+        "Burj Khalifa — Profil Altitudine",
+        "Comparatie Geoid Tri-Continental"
+    ])
+
+    # ── ABU DHABI ────────────────────────────────────────────────────────────────
+    with sec1:
+        st.markdown("### Abu Dhabi, EAU — 10 decembrie 2025")
+        st.markdown("""
+**264 fotografii JPG analizate** cu Camera Standard Samsung Galaxy A72 in zona Abu Dhabi
+(lat medie 24.412°N, lon medie 54.475°E). Altitudine medie: **−22,0 m WGS84** — confirmand
+direct modelul EGM96: la Abu Dhabi, **nivelul marii corespunde cu −22 m WGS84** (N_geoid ≈ −27 m).
+        """)
+
+        if PLOTLY_OK:
+            # Secventele GPS Fantoma Abu Dhabi
+            seq_data = {
+                "Secventa": ["Seq 1", "Seq 2", "Seq 3", "Seq 4", "Seq 5", "Seq 6-8"],
+                "Nr. foto": [7, 14, 5, 24, 3, "~30 total"],
+                "Alt. WGS84 (m)": [-20.8, -9.33, -11.56, -11.51, -28.73, "var."],
+                "GPS Timestamp": ["07:16:21 UTC (inghetat)", "07:21:02 UTC (inghetat)",
+                                   "07:21:56 UTC (inghetat)", "07:23:58 UTC (inghetat)",
+                                   "07:29:58 UTC (inghetat)", "diverse (inghetate)"],
+                "Status": ["FANTOMA", "FANTOMA", "FANTOMA", "FANTOMA", "FANTOMA", "FANTOMA"]
+            }
+            df_seq = pd.DataFrame(seq_data)
+            st.dataframe(df_seq, use_container_width=True)
+
+            st.markdown("""
+<div class="finding-box">
+<b>Mecanism identificat:</b> In interiorul unui mall sau suk acoperit din Abu Dhabi,
+receptorul GNSS al Samsung Galaxy A72 a pierdut semnalul satelitar si a retinut
+ultimele coordonate valide. Secventa cea mai lunga: <b>24 fotografii consecutive</b>
+(~2,5 minute) cu lat/lon/alt/GPS_timestamp IDENTICE. Structurial, datele sunt
+indistinguibile de coordonate GPS valide.
+</div>
+""", unsafe_allow_html=True)
+
+        col_l, col_r = st.columns(2)
+        with col_l:
+            st.markdown("**Distributia altitudinilor WGS84 — Abu Dhabi:**")
+            if PLOTLY_OK:
+                alt_bins = [-40,-35,-30,-25,-20,-15,-10,-5,0,5,10,15]
+                alt_counts = [3, 8, 25, 48, 62, 55, 35, 15, 8, 3, 2, 0]
+                fig_hist = go.Figure(go.Bar(
+                    x=[f"{alt_bins[i]} la {alt_bins[i+1]}m" for i in range(len(alt_bins)-1)],
+                    y=alt_counts[:len(alt_bins)-1],
+                    marker_color=["#1a5276" if v > -10 else "#c0392b" for v in alt_bins[:-1]],
+                    text=alt_counts[:len(alt_bins)-1],
+                    textposition="outside"
+                ))
+                fig_hist.update_layout(
+                    title="Distributie altitudini WGS84 (Abu Dhabi, 264 JPG)",
+                    xaxis_title="Interval altitudine WGS84",
+                    yaxis_title="Nr. fotografii",
+                    height=350, showlegend=False
+                )
+                st.plotly_chart(fig_hist, use_container_width=True)
+
+        with col_r:
+            st.markdown("**Interpretare geodezica:**")
+            st.markdown("""
+| Altitudine WGS84 | H ortometric* | Interpretare |
+|---|---|---|
+| −38,4 m (min) | −11,4 m | Parcare subterana? |
+| −22,0 m (medie) | **≈ 0 m** | **Nivelul marii Abu Dhabi** |
+| −11,5 m | ≈ +10,5 m | Strada/cladire joasa |
+| +13,1 m (max) | ≈ +36 m | Etaj superior |
+
+*H = h_WGS84 − N_geoid; N ≈ −27 m la Abu Dhabi (EGM96)
+            """)
+            st.info("**Confirmare empirica EGM96:** Media altitudinilor WGS84 (−22m) "
+                    "corespunde exact nivelului marii la Abu Dhabi conform modelului geoidal.")
+
+    # ── BURJ KHALIFA ─────────────────────────────────────────────────────────────
+    with sec2:
+        st.markdown("### Burj Khalifa, Dubai — 9 decembrie 2025")
+        st.markdown("""
+**194 fotografii JPG** capturate in si in jurul Burj Khalifa (828 m, cea mai inalta cladire din lume).
+Analiza EXIF a relevat un **profil complet de altitudine** si doua tipuri de comportament GPS.
+        """)
+
+        if PLOTLY_OK:
+            # Profil altitudine Burj Khalifa
+            faze = [
+                ("Sosire exterior\n15:43-15:47 UTC", -30, 8, "#27ae60", "GPS OK"),
+                ("Interior intrare\n16:47-16:54 UTC", None, 29, "#e74c3c", "GPS ABSENT"),
+                ("Platforma obs.\n16:56-18:01 UTC", 427, 52, "#1a5276", "GPS OK — Etaj 124"),
+                ("Interior seara\n18:45-18:50 UTC", None, 24, "#e67e22", "GPS PARTIAL"),
+                ("Subsol\n18:50 UTC", -67.7, 2, "#8e44ad", "GPS OK — Subteran"),
+                ("Noapte 21:11\n21:11-22:14 UTC", 252, 79, "#2980b9", "GPS OK — Etaj ~45"),
+            ]
+
+            fig_burj = go.Figure()
+            culori = [f[3] for f in faze]
+            for i, (faza, alt, n, col, status) in enumerate(faze):
+                if alt is not None:
+                    fig_burj.add_trace(go.Scatter(
+                        x=[i], y=[alt],
+                        mode="markers+text",
+                        marker=dict(size=max(12, n//3), color=col, symbol="circle",
+                                    line=dict(color="white", width=2)),
+                        text=[f"{alt}m<br>{n} foto"],
+                        textposition="top center",
+                        name=status,
+                        hovertemplate=f"<b>{faza}</b><br>Alt: {alt}m WGS84<br>Foto: {n}<br>{status}<extra></extra>"
+                    ))
+                else:
+                    fig_burj.add_trace(go.Scatter(
+                        x=[i], y=[0],
+                        mode="markers+text",
+                        marker=dict(size=max(12, n//3), color=col, symbol="x",
+                                    line=dict(color="white", width=2)),
+                        text=[f"GPS ABSENT<br>{n} foto"],
+                        textposition="top center",
+                        name=status,
+                        hovertemplate=f"<b>{faza}</b><br>GPS ABSENT<br>Foto: {n}<br>{status}<extra></extra>"
+                    ))
+
+            # Linia nivelului marii WGS84 la Dubai
+            fig_burj.add_hline(y=-33, line_dash="dash", line_color="#e74c3c",
+                               annotation_text="Nivelul marii WGS84 Dubai (N≈−33m)")
+            fig_burj.add_hline(y=452-33, line_dash="dot", line_color="#1a5276",
+                               annotation_text="Etaj 124 At the Top (452m ortometric = 419m WGS84)")
+
+            fig_burj.update_layout(
+                title="Profil altitudine EXIF WGS84 — Burj Khalifa, 9 dec 2025",
+                xaxis=dict(ticktext=[f[0] for f in faze], tickvals=list(range(len(faze)))),
+                yaxis_title="Altitudine WGS84 (m)",
+                height=500, showlegend=True,
+                xaxis_title="Faza / Ora"
+            )
+            st.plotly_chart(fig_burj, use_container_width=True)
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("""
+**Tabel faze Burj Khalifa:**
+
+| Faza | Alt. WGS84 | H ortometric | Locatie |
+|---|---|---|---|
+| Exterior sosire | −28 la −35 m | 0–5 m | Strada Dubai |
+| **Interior intrare** | **GPS ABSENT** | — | **Lobby Burj Khalifa** |
+| **Platforma obs.** | **424–433 m** | **≈ 460 m** | **Etaj 124 "At the Top"** |
+| Subsol | **−67,7 m** | −34,7 m | Parcare/Metro subteran |
+| Noapte (ext.) | 240–265 m | ≈ 275 m | Zona exterioara Burj |
+            """)
+        with col_b:
+            st.markdown("""
+**Validare geodezica:**
+
+Altitudine medie platforma: **427 m WGS84**
+N_geoid Dubai (din masuratori): **≈ −33 m**
+H ortometric calculat: **427 − (−33) = 460 m**
+Etaj 124 "At the Top" (oficial): **452 m**
+**Diferenta: 8 m → CONFIRMAT!** ✓
+
+---
+
+**Comportament GPS in Burj Khalifa:**
+- **TIP 1 — GPS ABSENT:** 29 foto fara niciun camp GPS in EXIF (lobby/interior)
+- **TIP 2 — GPS VALID:** 142 foto cu altitudine corecta (exterior/platforma)
+- **TIP 3 — GPS NEGATIV:** −67,7 m WGS84 = subsol confirmat
+            """)
+            st.success("Burj Khalifa (828m) confirma functionarea GPS la altitudini "
+                       "extreme urbane cand exista vizibilitate satelitara.")
+
+    # ── COMPARATIE GEOID TRI-CONTINENTAL ─────────────────────────────────────────
+    with sec3:
+        st.markdown("### Comparatie Geoid EGM96 — Trei Continente")
+        st.markdown("""
+Datele reale din cele trei locatii documentate confirma in mod empiric modelul geoidal EGM96
+(Lemoine et al., 1998; Pavlis et al., 2012) — **primul studiu care valideaza N_geoid din
+metadate EXIF ale fotografiilor de consum.**
+        """)
+
+        # Tabel geoid
+        geoid_data = {
+            "Locatie": ["Tenerife, Insulele Canare (Atlantic)", "Abu Dhabi, EAU (Golf Persic)", "Dubai, EAU (Golf Persic)"],
+            "Coordonate": ["28.019°N, 16.614°V", "24.412°N, 54.475°E", "25.205°N, 55.276°E"],
+            "Data": ["9 aug 2025", "10 dec 2025", "9 dec 2025"],
+            "Alt. medie WGS84": ["+48.54 m (fantoma)", "−22.0 m (medie)", "−30 m (sol)"],
+            "N_geoid EGM96 (empiric)": ["+48 m", "−27 m", "−33 m"],
+            "Nivel mare = WGS84": ["+48 m", "−22 m", "−33 m"],
+            "Fenomen documentat": ["GPS Fantoma 243 foto / 49 min", "GPS Fantoma 8 secv. / max 24 foto", "GPS Absent lobby / Altit. obs. deck confirmata"]
+        }
+        df_geoid = pd.DataFrame(geoid_data)
+        st.dataframe(df_geoid, use_container_width=True)
+
+        if PLOTLY_OK:
+            col_g1, col_g2 = st.columns(2)
+
+            with col_g1:
+                # Bar chart geoid comparison
+                locatii = ["Tenerife\n(Atlantic)", "Abu Dhabi\n(Golf Persic)", "Dubai\n(Golf Persic)"]
+                n_vals = [48, -27, -33]
+                culori_g = ["#1a5276" if v > 0 else "#c0392b" for v in n_vals]
+
+                fig_geoid = go.Figure(go.Bar(
+                    x=locatii, y=n_vals,
+                    marker_color=culori_g,
+                    text=[f"N = {v} m" for v in n_vals],
+                    textposition="outside"
+                ))
+                fig_geoid.add_hline(y=0, line_color="black", line_width=2,
+                                    annotation_text="Nivelul mediu al marii (H=0 m ortometric)")
+                fig_geoid.update_layout(
+                    title="N_geoid EGM96 confirmat empiric din EXIF fotografii",
+                    yaxis_title="Ondulatie geoid N (m WGS84)",
+                    height=380,
+                    yaxis=dict(range=[-60, 70])
+                )
+                st.plotly_chart(fig_geoid, use_container_width=True)
+
+            with col_g2:
+                # Scatter: WGS84 vs ortometric
+                fig_comp = go.Figure()
+                # Tenerife sea level
+                fig_comp.add_trace(go.Scatter(
+                    x=[1], y=[48.54],
+                    mode="markers+text",
+                    name="Tenerife — GPS Fantoma (nivelul marii)",
+                    marker=dict(size=20, color="#c0392b", symbol="star"),
+                    text=["Tenerife\n+48.54m WGS84\n= 0m ortometric"],
+                    textposition="top right"
+                ))
+                fig_comp.add_trace(go.Scatter(
+                    x=[2], y=[-22.0],
+                    mode="markers+text",
+                    name="Abu Dhabi — medie altitudini",
+                    marker=dict(size=20, color="#e67e22", symbol="star"),
+                    text=["Abu Dhabi\n−22m WGS84\n≈ 0m ortometric"],
+                    textposition="top right"
+                ))
+                fig_comp.add_trace(go.Scatter(
+                    x=[3], y=[-33.0],
+                    mode="markers+text",
+                    name="Dubai — nivel sol",
+                    marker=dict(size=20, color="#8e44ad", symbol="star"),
+                    text=["Dubai\n−33m WGS84\n≈ 0m ortometric"],
+                    textposition="top right"
+                ))
+                fig_comp.add_hline(y=0, line_dash="dash", line_color="blue",
+                                   annotation_text="H=0 ortometric (nivelul marii real)")
+                fig_comp.update_layout(
+                    title="Nivelul marii WGS84 — 3 locatii, 3 valori complet diferite",
+                    yaxis_title="Altitudine WGS84 (m)",
+                    xaxis=dict(tickvals=[1,2,3], ticktext=["Tenerife", "Abu Dhabi", "Dubai"]),
+                    height=380, showlegend=False
+                )
+                st.plotly_chart(fig_comp, use_container_width=True)
+
+        st.divider()
+        st.markdown("### Cele Doua Tipuri de Esec GPS — Clasificare Noua")
+
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            st.markdown("""
+<div style='background:#eafaf1; border:2px solid #27ae60; border-radius:10px; padding:16px;'>
+<h4 style='color:#1e8449;'>TIP 1 — GPS ABSENT</h4>
+<b>Definitie:</b> Receptorul GNSS nu inregistreaza niciun camp GPS in EXIF.<br><br>
+<b>Observat:</b> 29 fotografii in lobby-ul Burj Khalifa (interior cladire)<br><br>
+<b>Detectabilitate:</b> ✅ IMEDIAT — campurile GPS lipsesc din EXIF<br><br>
+<b>Pericol pentru AI:</b> SCAZUT — sistemele de validare refuza datele fara GPS<br><br>
+<b>Conform JEITA EXIF 2.32:</b> Comportament <i>conform</i> — absenta campului = lipsa date
+</div>
+""", unsafe_allow_html=True)
+
+        with col_t2:
+            st.markdown("""
+<div style='background:#fef9f9; border:2px solid #c0392b; border-radius:10px; padding:16px;'>
+<h4 style='color:#c0392b;'>TIP 2 — GPS FANTOMA ⚠️</h4>
+<b>Definitie:</b> Receptorul GNSS retine ultima coordonata valida si o inscrie in EXIF-ul tuturor
+fotografiilor ulterioare, fara niciun indicator de pierdere a semnalului.<br><br>
+<b>Observat:</b> 243 foto Tenerife (49 min) + 8 secvente Abu Dhabi (max 24 foto)<br><br>
+<b>Detectabilitate:</b> ❌ INVIZIBIL — EXIF are structura identica cu date valide<br><br>
+<b>Pericol pentru AI:</b> CRITIC — sistemele AI accepta coordonatele ca valide<br><br>
+<b>Indicator cheie:</b> GPS Timestamp ingheat vs Camera DateTime (delta >120s = ALERT)
+</div>
+""", unsafe_allow_html=True)
+
+        st.divider()
+        st.markdown("""
+<div class="doi-box">
+<b>Referinta stiintifica:</b> Gamulescu, O.M. (2026). GPS Fantoma: Primul Studiu Experimental
+Privind Inghetarea Silentioasa a Coordonatelor GNSS in 6 Aplicatii Georeferentiale Mobile
+— Cadrul AGRI-GEO si Implicatii pentru Managementul Riscului Agricol.<br>
+<b>DOI articol anterior:</b> 10.5281/zenodo.19829462<br>
+Platforma: https://georeferencing-applications.streamlit.app/c_SecureGeo_GNSS_Framework
+</div>
+""", unsafe_allow_html=True)
