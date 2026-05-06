@@ -31,8 +31,8 @@ st.sidebar.markdown("""
 st.sidebar.caption("Prof. Asoc. Dr. Oliviu Mihnea Gamulescu")
 st.sidebar.caption("UCB Targu Jiu | APIA CJ Gorj")
 st.sidebar.divider()
-st.sidebar.markdown("**Progres:** 27 / 30 zile")
-st.sidebar.progress(27/30)
+st.sidebar.markdown("**Progres:** 28 / 30 zile")
+st.sidebar.progress(28/30)
 st.sidebar.markdown(f"**Data curenta:** {date.today().strftime('%d.%m.%Y')}")
 
 st.markdown("""
@@ -92,7 +92,7 @@ with c2:
     st.markdown(kpi_style.format(color="#2980b9", val="5",  label="Module tematice"),
                 unsafe_allow_html=True)
 with c3:
-    st.markdown(kpi_style.format(color="#27ae60", val="27", label="Zile finalizate"),
+    st.markdown(kpi_style.format(color="#27ae60", val="28", label="Zile finalizate"),
                 unsafe_allow_html=True)
 with c4:
     st.markdown(kpi_style.format(color="#e74c3c", val="10+", label="Modele AI antrenate"),
@@ -164,7 +164,7 @@ module = {
         ("25", "Agenti AI — automatizare fluxuri cu LangChain", True),
         ("26", "Agent care cauta articole stiintifice automat", True),
         ("27", "Agent inspector APIA — analizeaza parcele din fisier", True),
-        ("28", "Dashboard AI complet — toate instrumentele integrate", False),
+        ("28", "Dashboard AI complet — toate instrumentele integrate", True),
         ("29", "Deploy pe Streamlit Cloud", False),
         ("30", "Certificat final + roadmap AI 2026-2027", False),
     ],
@@ -199,6 +199,6 @@ for modul, zile in module.items():
 
 st.divider()
 st.success(
-    "**Modulele 1, 2, 3, 4 — FINALIZATE** | **Modul 5 — in curs** (Z25-Z27 gata). "
-    "Urmatoarea: **Ziua 28 — Dashboard AI complet**."
+    "**Modulele 1, 2, 3, 4 — FINALIZATE** | **Modul 5 — in curs** (Z25-Z28 gata). "
+    "Urmatoarea: **Ziua 29 — Deploy Streamlit Cloud**."
 )
