@@ -32,7 +32,7 @@ try:
     _pages_dir = os.path.dirname(os.path.abspath(__file__))
     if _pages_dir not in sys.path:
         sys.path.insert(0, _pages_dir)
-    from detect_parcels_unified import segment_parcels, build_overlay_mask
+    from _detect_parcels_unified import segment_parcels, build_overlay_mask
     UNIFIED_OK = True
 except Exception as _e:
     UNIFIED_OK = False

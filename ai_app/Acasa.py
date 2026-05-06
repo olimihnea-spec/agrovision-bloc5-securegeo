@@ -31,8 +31,8 @@ st.sidebar.markdown("""
 st.sidebar.caption("Prof. Asoc. Dr. Oliviu Mihnea Gamulescu")
 st.sidebar.caption("UCB Targu Jiu | APIA CJ Gorj")
 st.sidebar.divider()
-st.sidebar.markdown("**Progres:** 17 / 30 zile")
-st.sidebar.progress(17/30)
+st.sidebar.markdown("**Progres:** 27 / 30 zile")
+st.sidebar.progress(27/30)
 st.sidebar.markdown(f"**Data curenta:** {date.today().strftime('%d.%m.%Y')}")
 
 st.markdown("""
@@ -92,7 +92,7 @@ with c2:
     st.markdown(kpi_style.format(color="#2980b9", val="5",  label="Module tematice"),
                 unsafe_allow_html=True)
 with c3:
-    st.markdown(kpi_style.format(color="#27ae60", val="17", label="Zile finalizate"),
+    st.markdown(kpi_style.format(color="#27ae60", val="27", label="Zile finalizate"),
                 unsafe_allow_html=True)
 with c4:
     st.markdown(kpi_style.format(color="#e74c3c", val="10+", label="Modele AI antrenate"),
@@ -150,20 +150,20 @@ module = {
         ("15", "Clasificare texte agricole — Zero-Shot HF, 6 categorii APIA", True),
         ("16", "Rezumare automata — extractiva TF-IDF + abstractiva BART", True),
         ("17", "NER — extragere entitati: persoane, locatii, suprafete, NDVI", True),
-        ("18", "Sinteza M3 — pipeline NLP complet", False),
+        ("18", "Sinteza M3 — pipeline NLP complet", True),
     ],
     "Modulul 4 (Zilele 19-24) — AI Generativ Local": [
-        ("19", "Ollama — modele LLM locale (Llama 3, Mistral) gratuit", False),
-        ("20", "Generator rapoarte APIA cu LLM local", False),
-        ("21", "Generare imagini gratuit — Stable Diffusion local", False),
-        ("22", "Generator continut academic cu LLM", False),
-        ("23", "RAG simplu — intreaba un document PDF", False),
-        ("24", "Sinteza M4", False),
+        ("19", "Ollama — modele LLM locale (Llama 3, Mistral) gratuit", True),
+        ("20", "Generator rapoarte APIA cu LLM local", True),
+        ("21", "Generare imagini AI — teorie si instrumente online", True),
+        ("22", "Generator continut academic cu LLM", True),
+        ("23", "RAG simplu — intreaba un document PDF", True),
+        ("24", "Sinteza M4", True),
     ],
     "Modulul 5 (Zilele 25-30) — AI Agenti + Finalizare": [
-        ("25", "Agenti AI — automatizare fluxuri cu LangChain", False),
-        ("26", "Agent care cauta articole stiintifice automat", False),
-        ("27", "Agent inspector APIA — analizeaza parcele din fisier", False),
+        ("25", "Agenti AI — automatizare fluxuri cu LangChain", True),
+        ("26", "Agent care cauta articole stiintifice automat", True),
+        ("27", "Agent inspector APIA — analizeaza parcele din fisier", True),
         ("28", "Dashboard AI complet — toate instrumentele integrate", False),
         ("29", "Deploy pe Streamlit Cloud", False),
         ("30", "Certificat final + roadmap AI 2026-2027", False),
@@ -199,7 +199,6 @@ for modul, zile in module.items():
 
 st.divider()
 st.success(
-    "**Modul 1 (ML) si Modul 2 (CV) — FINALIZATE** | "
-    "**Modul 3 (NLP) — in curs** (Z13, Z15, Z16, Z17 gata). "
-    "Urmatoarea: **Ziua 18 — Sinteza NLP**."
+    "**Modulele 1, 2, 3, 4 — FINALIZATE** | **Modul 5 — in curs** (Z25-Z27 gata). "
+    "Urmatoarea: **Ziua 28 — Dashboard AI complet**."
 )
