@@ -31,6 +31,8 @@ try:
         r"C:\Program Files\Tesseract-OCR\tesseract.exe",
         r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
         r"C:\Users\USER\AppData\Local\Programs\Tesseract-OCR\tesseract.exe",
+        "/usr/bin/tesseract",
+        "/usr/local/bin/tesseract",
     ]
     for cale in cai_tesseract:
         if os.path.exists(cale):
