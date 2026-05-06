@@ -1294,7 +1294,7 @@ with tab5:
         - Ecosisteme de date securizate: ZIP criptat + GeoJSON + GPX
 
         **Experienta dovedita:**
-        - Inspector Principal APIA CJ Gorj (20+ ani)
+        - Consilier Superior APIA CJ Gorj (20+ ani)
         - Teza doctorat: recunoastere automata culturi cu drone (2024)
         - Aplicatie AgroVision live: mAP50=0.829 (Streamlit Cloud)
         - Articol trimis USAMV Bucuresti (12 apr 2026)

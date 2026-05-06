@@ -47,7 +47,7 @@ st.markdown("""
         Prof. Asoc. Dr. Oliviu Mihnea Gamulescu
     </div>
     <div style='font-size:12px; opacity:0.7; margin-bottom:14px;'>
-        Inspector Principal APIA CJ Gorj &nbsp;·&nbsp; Cadru Didactic UCB Targu Jiu
+        Consilier Superior APIA CJ Gorj &nbsp;·&nbsp; Cadru Didactic UCB Targu Jiu
     </div>
     <div style='background:rgba(243,156,18,0.1); border:1px solid rgba(243,156,18,0.3);
          border-radius:10px; padding:14px 20px; display:inline-block; margin-bottom:16px;'>
