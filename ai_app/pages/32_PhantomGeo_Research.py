@@ -207,6 +207,26 @@ requirements with **EU AI Act Article 10(3)** data quality obligations.
     (tipic <strong>3–5 m</strong> pentru receptoare civile L1).
   </p>
 </div>
+<div style="background:#FFF8E1; border-left:5px solid #F9A825; border-radius:8px;
+     padding:1rem 1.3rem; margin:0.5rem 0 0.5rem 0;">
+  <p style="margin:0 0 0.5rem 0; font-size:0.9rem; color:#4E342E;">
+    <strong>⚠️ De ce ε<sub>GNSS</sub> = 3–5 m este pragul critic în monitorizarea agricolă?</strong>
+  </p>
+  <p style="margin:0 0 0.6rem 0; font-size:0.88rem; color:#4E342E; line-height:1.6;">
+    Parcelele agricole din România pot avea lățimi de <strong>10–15 m</strong> (culturi de rând,
+    livezi, vii, fâșii din restructurări). O eroare de poziționare de <strong>5 m</strong>
+    reprezintă <strong>33–50% din lățimea parcelei</strong> — suficientă pentru ca fotografia
+    să fie atribuită automat parcelei vecine în sistemele LPIS/IACS.
+  </p>
+  <p style="margin:0; font-size:0.88rem; color:#4E342E; line-height:1.6;">
+    🌾 <em>Exemplu:</em> O parcelă de grâu cu lățimea de <strong>10 m</strong> și o parcelă de
+    rapiță alăturată. O fotografie cu GF activ (coordonate EXIF decalate cu 6 m față de poziția
+    reală) va fi indexată automat de AI în parcela de rapiță — generând o
+    <strong>neregulă artificială APIA</strong> invizibilă inspectorului fără analiză PGRS.
+    Prin urmare, orice eroare <em>||P<sub>EXIF</sub> − P<sub>actual</sub>|| &gt; ε<sub>GNSS</sub></em>
+    constituie o amenințare directă la integritatea geodatelor în monitorizarea PAC.
+  </p>
+</div>
 """, unsafe_allow_html=True)
 
     with st.expander("ℹ️ Interpretare și context"):
