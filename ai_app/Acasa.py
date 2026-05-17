@@ -114,6 +114,100 @@ with col_r3:
 
 st.divider()
 
+# ── DESCOPERIRI CHEIE CERCETARE ISI ─────────────────────────────────
+st.subheader("🔬 Descoperiri cheie — Cercetare ISI 2026: Geolocalizare Fantomă")
+
+st.markdown("""
+<div style='background:#E3F2FD; border-left:5px solid #1565C0; border-radius:8px;
+     padding:0.9rem 1.2rem; margin-bottom:1rem; font-size:0.9rem; line-height:1.6;'>
+  <strong>Definiție formală introdusă:</strong>
+  Un eveniment de <em>Geolocalizare Fantomă (GF)</em> apare când coordonatele (φ, λ, h) încorporate
+  în metadatele EXIF ale imaginii la momentul achiziției <strong>t₁</strong> corespund unui fix GNSS
+  obținut la un moment anterior <strong>t₀ &lt; t₁</strong>, din cauza pierderii semnalului în
+  intervalul [t₀, t₁] — generând dovezi geospațiale aparent valide, dar contextual false.<br>
+  <code style='background:#BBDEFB; padding:0.15rem 0.4rem; border-radius:4px;'>
+    GF(I) = ADEVĂRAT ⟺ ||P_EXIF(I) − P_actual(I)|| &gt; ε_GNSS
+  </code>
+</div>
+""", unsafe_allow_html=True)
+
+d1, d2, d3, d4, d5 = st.columns(5)
+rezultate = [
+    ("EXP04 Dubai\n(OPPO)", "100%", "#C62828", "FM-1, FM-2\nPGRS = 0.11\nFANTOMĂ"),
+    ("EXP07 Istanbul\n(OPPO)", "84.2%", "#D32F2F", "FM-1, FM-2\nPGRS = 0.18\nFANTOMĂ"),
+    ("EXP07 Istanbul\n(Samsung)", "3.6%", "#2E7D32", "FM-1\nPGRS = 0.79\nCONDIȚIONAT"),
+    ("EXP10 Lisabona\n(Samsung)", "4.7%", "#388E3C", "FM-1\nPGRS = 0.81\nCONDIȚIONAT"),
+    ("EXP11 Târgu Jiu\n(Samsung)", "15.0%", "#F57F17", "FM-1, FM-3\nPGRS = 0.71\nCONDIȚIONAT"),
+]
+for col, (exp, pgr, color, detalii) in zip([d1,d2,d3,d4,d5], rezultate):
+    with col:
+        st.markdown(f"""
+<div style='background:{color}; color:white; border-radius:10px; padding:0.8rem;
+     text-align:center; font-size:0.78rem; line-height:1.5;'>
+  <div style='font-size:0.75rem; opacity:0.85; margin-bottom:0.3rem;'>{exp}</div>
+  <div style='font-size:1.6rem; font-weight:900; line-height:1;'>PGR<br>{pgr}</div>
+  <div style='font-size:0.7rem; opacity:0.85; margin-top:0.3rem;
+       white-space:pre-line;'>{detalii}</div>
+</div>""", unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+ccc1, ccc2, ccc3 = st.columns(3)
+with ccc1:
+    st.markdown("""
+<div style='background:white; border-radius:10px; padding:1rem;
+     box-shadow:0 2px 8px rgba(0,0,0,0.08); border-top:4px solid #0D47A1;'>
+  <div style='font-weight:700; color:#0D47A1; margin-bottom:0.5rem;'>
+    🏗️ AGRO-GEO TRUST Framework
+  </div>
+  <div style='font-size:0.83rem; color:#444; line-height:1.6;'>
+    <strong>Strat 1:</strong> Geo-Integrity Layer<br>
+    <strong>Strat 2:</strong> Metadata Trust Layer<br>
+    <strong>Strat 3:</strong> Secure Transmission Layer<br>
+    <strong>Strat 4:</strong> AI Validation Layer
+  </div>
+</div>""", unsafe_allow_html=True)
+
+with ccc2:
+    st.markdown("""
+<div style='background:white; border-radius:10px; padding:1rem;
+     box-shadow:0 2px 8px rgba(0,0,0,0.08); border-top:4px solid #6A1B9A;'>
+  <div style='font-weight:700; color:#6A1B9A; margin-bottom:0.5rem;'>
+    📊 Phantom Geolocation Risk Score
+  </div>
+  <div style='font-size:0.83rem; color:#444; line-height:1.6;'>
+    <strong>Formula:</strong> PGRS ∈ [0, 1]<br>
+    7 sub-indicatori ponderați<br>
+    <strong>TRUSTED:</strong> PGRS ≥ 0.85<br>
+    <strong>FANTOMĂ:</strong> PGRS &lt; 0.40<br>
+    <em>Calculator interactiv disponibil →</em>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+with ccc3:
+    st.markdown("""
+<div style='background:white; border-radius:10px; padding:1rem;
+     box-shadow:0 2px 8px rgba(0,0,0,0.08); border-top:4px solid #B71C1C;'>
+  <div style='font-weight:700; color:#B71C1C; margin-bottom:0.5rem;'>
+    🔐 Dimensiuni de Securitate
+  </div>
+  <div style='font-size:0.83rem; color:#444; line-height:1.6;'>
+    <strong>Anti-Spoofing:</strong> OSNMA Galileo, RAIM, IMU<br>
+    <strong>Anti-Tampering:</strong> SHA-256, eIDAS, TPM<br>
+    <strong>Anti-Sniffing:</strong> TLS 1.3, DTLS, VPN<br>
+    <em>Aliniat AI Act Art. 10(3) — UE 2024/1689</em>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+st.markdown("""
+<div style='text-align:center; font-size:0.78rem; color:#78909C; margin-top:0.5rem;'>
+  © 2026 Oliviu Mihnea Gămulescu — Cercetare academică independentă, UCB Târgu Jiu.
+  Articol ISI în pregătire pentru Remote Sensing / Sensors (MDPI, Q1/Q2).
+</div>
+""", unsafe_allow_html=True)
+
+st.divider()
+
 # KPI-uri
 c1, c2, c3, c4 = st.columns(4)
 kpi_style = """
