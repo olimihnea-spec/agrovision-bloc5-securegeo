@@ -3,6 +3,8 @@
 # Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu, UCB Targu Jiu
 # Copyright © 2026 Oliviu Mihnea Gamulescu. Toate drepturile rezervate.
 
+import hashlib
+import json
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
@@ -295,15 +297,15 @@ with tab2:
         "Mediu": ["E-1 + E-3", "E-1 + E-2", "E-1 + E-2", "E-1 + E-3", "E-1"],
     })
 
+    def color_pgr(val):
+        if val > 50:
+            return "background-color:#FFCDD2; color:#B71C1C"
+        elif val > 10:
+            return "background-color:#FFF9C4; color:#F57F17"
+        return "background-color:#C8E6C9; color:#2E7D32"
+
     st.dataframe(
-        df_exp.style.apply(
-            lambda row: [
-                "background:#FFCDD2" if row["PGR (%)"] > 50
-                else "background:#FFF9C4" if row["PGR (%)"] > 10
-                else "background:#C8E6C9"
-            ] * len(row),
-            axis=1
-        ),
+        df_exp.style.map(color_pgr, subset=["PGR (%)"]),
         use_container_width=True,
         hide_index=True,
     )
@@ -879,8 +881,6 @@ intern inconsistente.
 
         st.divider()
         st.markdown("#### Demo SHA-256 — Detecție modificare metadate GPS")
-        import hashlib, json, datetime
-
         st.markdown("Completează coordonatele GPS originale:")
         col_t1, col_t2, col_t3 = st.columns(3)
         with col_t1:
@@ -954,7 +954,7 @@ de la dispozitivul de achiziție la infrastructura cloud.
             return "background-color:#FFF9C4; color:#F57F17"
 
         st.dataframe(
-            df_sniff.style.applymap(color_sensitivity, subset=["Sensibilitate"]),
+            df_sniff.style.map(color_sensitivity, subset=["Sensibilitate"]),
             use_container_width=True, hide_index=True,
         )
 
