@@ -130,10 +130,6 @@ GDPR_EVALUARE = [
      "probleme": ["Internet-dependent (0 date din zbor)", "Destinatia GPS necunoscuta", "Esec functional total"],
      "recomandare": "INADMISIBIL pentru insp. agricole",
      "culoare": "#922b21"},
-    {"aplicatie": "GeoFoto APIA (oficial)", "scor": "CONFORM / NEFUNCTIONAL",
-     "probleme": ["Nefunctionala in test (11500m)", "Harti doar Romania", "Fara afisare alt/viteza/coordonate"],
-     "recomandare": "Singura GDPR conformA — necesita dezvoltare urgenta",
-     "culoare": "#117a65"},
 ]
 
 COMPARATIE_APPS = pd.DataFrame([
@@ -146,9 +142,6 @@ COMPARATIE_APPS = pd.DataFrame([
     {"Aplicatie": "GPS Camera", "Offline": "NU", "EXIF lat/lon": "N/A",
      "EXIF altitudine": "N/A", "EXIF viteza": "N/A", "Video geo": "NU",
      "GDPR": "Necunoscut", "Nr. foto zbor": 0, "Rezultat": "ESEC"},
-    {"Aplicatie": "GeoFoto APIA", "Offline": "NU", "EXIF lat/lon": "N/A",
-     "EXIF altitudine": "N/A", "EXIF viteza": "N/A", "Video geo": "NU",
-     "GDPR": "Conform UE", "Nr. foto zbor": 0, "Rezultat": "ESEC TOTAL"},
 ])
 
 # ─── FUNCTII UTILITARE ─────────────────────────────────────────────────────────
@@ -418,7 +411,7 @@ with tab1:
         {
             "data": "18-19 apr 2026",
             "titlu": "Analiza comparativa 4 aplicatii mobile",
-            "detalii": "Timestamp Camera, Location on Photo, GPS Camera, GeoFoto APIA. Evaluare GDPR, offline, EXIF complet.",
+            "detalii": "Timestamp Camera, Location on Photo, GPS Camera. Evaluare GDPR, offline, EXIF complet.",
             "status": "FINALIZAT",
             "culoare": "#27ae60",
             "icon": "ANALIZA",
@@ -748,9 +741,7 @@ REZULTATE PRINCIPALE
 
 [ESEC] GPS Camera: 0 date din zbor (internet-dependent)
 
-[ESEC] GeoFoto APIA: nefunctionala in conditiile testului
-
-CONCLUZIE: 0 din 4 aplicatii indeplinesc toate criteriile AGRI-GEO.
+CONCLUZIE: 0 din 3 aplicatii testate indeplinesc toate criteriile AGRI-GEO.
 
 FRAMEWORK AGRI-GEO (propus)
 ----------------------------
@@ -770,11 +761,10 @@ FRAMEWORK AGRI-GEO (propus)
             if include_recom:
                 raport += f"""RECOMANDARI
 -----------
-1. Revizuire urgenta GeoFoto APIA (MADR): adaugare altitudine + offline total
-2. Standard tehnic obligatoriu pentru aplicatii inspectie APIA (AGRI-GEO)
-3. Pilotare SecureGeo in jud. Gorj, Dolj, Olt (parteneriate existente)
-4. Articol ISI: MDPI Drones (IF 4.8, Q1, APC 2600 CHF)
-5. Propunere proiect ACE2-EU: AGROVISION Secure
+1. Standard tehnic obligatoriu pentru aplicatii inspectie APIA (AGRI-GEO)
+2. Pilotare SecureGeo in jud. Gorj, Dolj, Olt (parteneriate existente)
+3. Articol ISI: MDPI Drones (IF 4.8, Q1, APC 2600 CHF)
+4. Propunere proiect ACE2-EU: AGROVISION Secure
 
 {sep}
 Raport generat de SecureGeo Platform v1.0 | Bloc 5 AI Aplicat
@@ -922,9 +912,8 @@ with tab5:
                         f"Inspector: {nota_autor}\n\n"
                         f"Timestamp Camera: 362 foto, altitudine EXIF = 11439.2m\n"
                         f"Location on Photo: 15 foto, altitudine LIPSA din EXIF\n"
-                        f"GPS Camera: 0 date din zbor (internet-dependent)\n"
-                        f"GeoFoto APIA: nefunctionala in test\n\n"
-                        f"Concluzie: 0/4 aplicatii indeplinesc criteriile AGRI-GEO.\n"
+                        f"GPS Camera: 0 date din zbor (internet-dependent)\n\n"
+                        f"Concluzie: 0/3 aplicatii testate indeplinesc criteriile AGRI-GEO.\n"
                         f"Propunere: SecureGeo ACE2-EU | UCB Targu Jiu, iulie 2026\n"
                     )
 
