@@ -76,6 +76,44 @@ in metodologia aplicata pe parcele agricole din judetul Gorj cu ajutorul dronelo
 Toate instrumentele ruleaza local sau pe servicii gratuite, fara costuri.
 """)
 
+# ── CERCETARE ISI — acces rapid ─────────────────────────────────────
+st.markdown("""
+<div style='background:linear-gradient(135deg,#0D47A1 0%,#1565C0 60%,#283593 100%);
+     border-radius:14px; padding:1.2rem 1.5rem; margin-bottom:1rem; color:white;'>
+  <div style='font-size:0.8rem; opacity:0.8; margin-bottom:0.4rem;'>
+    🆕 NOU — Cercetare ISI originala 2026
+  </div>
+  <div style='font-size:1.15rem; font-weight:800; margin-bottom:0.3rem;'>
+    🛰️ Geolocalizare Fantomă & Securitate Geospațială
+  </div>
+  <div style='font-size:0.85rem; opacity:0.9;'>
+    Phantom Geolocation · AGRO-GEO TRUST Framework · PGRS · Anti-Spoofing · Anti-Tampering · Anti-Sniffing
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+col_r1, col_r2, col_r3 = st.columns([1, 1, 1])
+with col_r1:
+    st.page_link(
+        "pages/32_PhantomGeo_Research.py",
+        label="🛰️  PhantomGeo Research — Articol ISI",
+        use_container_width=True,
+    )
+with col_r2:
+    st.page_link(
+        "pages/31_SecureGeo_Defense.py",
+        label="🔐  SecureGeo Defense — Anti-Spoofing/Tampering",
+        use_container_width=True,
+    )
+with col_r3:
+    st.page_link(
+        "pages/10b_SecureGeo_Platform.py",
+        label="🗺️  SecureGeo Platform — Harta GNSS",
+        use_container_width=True,
+    )
+
+st.divider()
+
 # KPI-uri
 c1, c2, c3, c4 = st.columns(4)
 kpi_style = """
