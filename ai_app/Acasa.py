@@ -36,6 +36,30 @@ st.sidebar.progress(30/30)
 st.sidebar.markdown(f"**Data curenta:** {date.today().strftime('%d.%m.%Y')}")
 
 st.markdown("""
+<div style='background:linear-gradient(135deg,#1B5E20 0%,#2E7D32 60%,#388E3C 100%);
+     border-radius:14px; padding:16px 22px; margin-bottom:18px; color:white;
+     border:2px solid #A5D6A7; box-shadow:0 4px 15px rgba(27,94,32,0.3);'>
+    <div style='font-size:11px; opacity:0.85; letter-spacing:1.5px; text-transform:uppercase;
+         margin-bottom:5px;'>
+        PUBLICATIE CONFIRMATA — octombrie 2026
+    </div>
+    <div style='font-size:17px; font-weight:800; line-height:1.4; margin-bottom:6px;'>
+        Scientific Papers Series Management, Economic Engineering
+        in Agriculture and Rural Development
+    </div>
+    <div style='font-size:13px; opacity:0.9; line-height:1.6;'>
+        Vol. 26, Issue 3, 2026 &nbsp;|&nbsp;
+        PRINT ISSN 2284-7995 &nbsp;|&nbsp; E-ISSN 2285-3952 &nbsp;|&nbsp;
+        USAMVB Bucuresti &nbsp;|&nbsp; BDI Indexat
+    </div>
+    <div style='font-size:12px; opacity:0.8; margin-top:6px;'>
+        Editor: Prof. Dr. Agatha Popescu &nbsp;|&nbsp;
+        Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
 <div style='display:flex; align-items:center; gap:16px; margin-bottom:16px;'>
     <div style='font-size:56px;'>🤖</div>
     <div>
