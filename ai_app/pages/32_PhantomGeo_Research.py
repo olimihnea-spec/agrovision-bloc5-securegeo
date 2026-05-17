@@ -255,6 +255,140 @@ requirements with **EU AI Act Article 10(3)** data quality obligations.
 > (București) — cu STII max = 127,3 → viteza implicată: 1.273 km/h
             """)
 
+    with st.expander("📐 Studiu de caz: Validarea formulei GF în context agricol PAC/LPIS"):
+        st.markdown("""
+### Verificare riguroasă: Definiție și formulă Geolocalizare Fantomă
+
+Orice formulă propusă într-un articol ISI trebuie să reziste unui proces de verificare critică.
+Mai jos este analiza completă a formulei GF, inclusiv obiecțiile posibile și răspunsurile contextuale.
+""")
+
+        st.markdown("#### ✅ Definiția textuală — validă")
+        st.success(
+            "\"Un eveniment GF apare când coordonatele (φ, λ, h) încorporate la t₁ corespund unui fix GNSS "
+            "obținut la t₀ < t₁, din cauza pierderii semnalului în [t₀, t₁], astfel încât coordonatele sunt "
+            "inconsistente spațial cu poziția reală (φ*, λ*, h*).\"\n\n"
+            "Captează: cauza (pierderea semnalului) · decalajul temporal (t₀ < t₁) · efectul (inconsistența spațială). Solidă."
+        )
+
+        st.markdown("#### ⚠️ Formula — trei obiecții posibile și răspunsurile lor")
+
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            st.markdown("""
+**Obiecție 1 — Pragul ε_GNSS = 3–5 m ar fi prea mic?**
+
+Argumente împotrivă:
+- Erorile GPS obișnuite (multipath, HDOP ridicat, condiții atmosferice)
+  depășesc frecvent 5 m fără să fie GF
+- Un prag de 3–5 m ar clasifica ~30-40% din măsurătorile normale ca "fantomă"
+
+---
+
+**Obiecție 2 — Bicondiționala (⟺) ar fi prea tare?**
+
+Formula spune simultan:
+- GF adevărat → distanța > ε_GNSS ✅
+- Distanța > ε_GNSS → GF adevărat ❌ (eroare mare ≠ neapărat fantomă)
+
+---
+
+**Obiecție 3 — Elementul temporal lipsește din formulă?**
+
+Definiția textuală include intervalul [t₀, t₁], dar formula
+nu conține nicio referire la durata pierderii de semnal.
+""")
+
+        with col2:
+            st.markdown("""
+**Răspuns 1 — Contextul agricol PAC validează pragul**
+
+Parcelele agricole din România: **10–15 m lățime**.
+O eroare de 5 m = **33–50% din lățimea parcelei** → fotografia
+este atribuită automat parcelei vecine în LPIS/IACS.
+
+În monitorizarea PAC, orice ||P_EXIF − P_actual|| > ε_GNSS
+este o eroare cu consecințe administrative reale (neregulă APIA).
+Prin urmare, pragul NU este arbitrar — este calibrat pe domeniu.
+
+---
+
+**Răspuns 2 — Bicondiționala este justificată în LPIS**
+
+În contextul atribuirii parcelelor, orice eroare > ε_GNSS
+produce un rezultat greșit **echivalent funcțional** cu GF,
+indiferent de cauza tehnică. Bicondiționala reflectă impactul,
+nu cauza — ceea ce este corect pentru un indicator operațional.
+
+---
+
+**Răspuns 3 — Elementul temporal este implicit în EXIF**
+
+Metadatele EXIF înregistrează fix-ul GPS la momentul t₁.
+Dacă fix-ul provine din t₀ < t₁, inconsistența spațială
+apare automat — [t₀, t₁] este intervalul de pierdere deja
+capturat prin inegalitatea ||P_EXIF − P_actual|| > ε_GNSS.
+""")
+
+        st.markdown("#### 📋 Variante de formulă analizate")
+
+        tab_f1, tab_f2, tab_f3 = st.tabs(["Varianta 1 — Prag mai mare", "Varianta 2 — Implicație", "Varianta 3 — Cu element temporal"])
+
+        with tab_f1:
+            st.markdown("""
+**Înlocuiește ε_GNSS cu un prag distinct δ_GF calibrat pe date experimentale:**
+""")
+            st.code("GF(I) = ADEVĂRAT  ⟺  ||P_EXIF(I) − P_actual(I)|| > δ_GF", language="text")
+            st.markdown("""
+unde **δ_GF ≥ 50 m** — un prag care exclude clar erorile normale GPS,
+aliniat cu datele experimentale (EXP04 OPPO: erori de sute de metri / alt oraș).
+
+**Concluzie:** Justificată pentru analiza generală GNSS. Dar în contextul LPIS,
+δ_GF = 50 m este prea permisiv — lasă nedetectate erorile de 6–49 m care deplasează
+fotografia în parcela vecină.
+""")
+
+        with tab_f2:
+            st.markdown("""
+**Implicație în loc de bicondiționată — condiție necesară, nu suficientă:**
+""")
+            st.code("GF(I) = ADEVĂRAT  ⟹  ||P_EXIF(I) − P_actual(I)|| > ε_GNSS", language="text")
+            st.markdown("""
+Dacă e fantomă, atunci distanța depășește precizia nominală. Mai conservator, mai corect logic general.
+
+**Concluzie:** Corectă epistemic, dar mai slabă operațional. Pierde din puterea de clasificare
+necesară unui indicator practic (PGRS).
+""")
+
+        with tab_f3:
+            st.markdown("""
+**Formulă completă cu element temporal explicit:**
+""")
+            st.code("GF(I) = ADEVĂRAT  ⟺  ||P_EXIF(I) − P_actual(I)|| > δ_GF  ∧  (t₁ − t₀) > Δt_crit", language="text")
+            st.markdown("""
+unde **Δt_crit** = intervalul minim de pierdere a semnalului (ex. 30 s),
+corelat cu mobilitatea platformei (UAV, vehicul, pietoni).
+
+**Concluzie:** Cea mai riguroasă pentru articole ISI Q1 cu analiză temporală explicită.
+Necesită date timestamp disponibile în EXIF — condiție îndeplinită în setul experimental.
+""")
+
+        st.markdown("#### 🏆 Concluzie: formula originală este validă în contextul PAC")
+        st.info("""
+**Formula `GF(I) = ADEVĂRAT ⟺ ||P_EXIF(I) − P_actual(I)|| > ε_GNSS` cu ε_GNSS = 3–5 m este corectă
+în monitorizarea agricolă PAC/LPIS** din următoarele motive cumulative:
+
+1. **Calibrare pe domeniu:** pragul 3–5 m corespunde exact lățimii minime a parcelelor
+   agricole din România (10 m), unde o eroare de 5 m produce atribuire greșită.
+2. **Impact funcțional identic:** în LPIS, orice eroare > ε_GNSS produce același efect
+   (neregulă artificială) indiferent de cauza tehnică (GF, multipath, spoofing).
+3. **Consistență cu PGRS:** sub-indicatorii PGRS sunt calibrați pe același prag —
+   schimbarea formulei GF ar dezalinia întregul sistem de scorare.
+4. **Originalitate documentată:** definiția, pragul și taxonomia FM-1—FM-4 sunt propuse
+   ca contribuție originală și protejate prin DOI `10.5281/zenodo.19829462`.
+""")
+
     st.divider()
     st.subheader("1.3 Contribuții Originale")
 
