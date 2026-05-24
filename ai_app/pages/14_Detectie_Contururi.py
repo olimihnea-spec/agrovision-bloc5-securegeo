@@ -37,7 +37,7 @@ try:
 except Exception as _e:
     UNIFIED_OK = False
 
-_VERSION = "v2026-04-20-G"   # schimba dupa fiecare restart pentru a confirma versiunea
+_VERSION = "v2026-05-20-H"   # schimba dupa fiecare restart pentru a confirma versiunea
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIG
@@ -740,8 +740,7 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
 
     coords = peak_local_max(
         dist,
-        min_distance=80,
-        threshold_abs=0.2,
+        min_distance=40,
         labels=(land > 0),
     )
     markers = np.zeros_like(gray, dtype=np.int32)
@@ -1268,6 +1267,9 @@ with tab2:
         metoda   = metoda_map[metoda_aleasa]
         mod_real = metoda != "masca"
 
+        if metoda == "slic" and st.session_state.get("aria_min", 15000) < 15000:
+            st.session_state["aria_min"] = 15000
+
         # Parametri specifici metodei
         canny_low, canny_high, kmeans_k, alb_prag = 30, 150, 6, 180
         masca_compas = masca_minimap = masca_text_ui = False
@@ -1322,7 +1324,7 @@ with tab2:
         st.markdown("**Filtrare contururi:**")
         aria_min_px = st.slider(
             "Arie minima (pixeli²):",
-            min_value=100, max_value=50000, value=1000, step=100,
+            min_value=100, max_value=50000, value=15000 if metoda == "slic" else 1000, step=100,
             help="Contururi mai mici sunt ignorate. Scade daca gaseste 0 parcele.",
             key="aria_min"
         )
@@ -1373,9 +1375,10 @@ with tab2:
 
                 elif metoda_efectiva == "slic":
                     # Folosim intotdeauna detecteaza_slic_watershed cu parametrii din script_parcele_corect.py
+                    aria_min_slic = max(aria_min_px, 15000)
                     img_rez, parcele_detectate, mask_grad = detecteaza_slic_watershed(
                         img_src, scala_m_per_px,
-                        aria_min_px=aria_min_px,
+                        aria_min_px=aria_min_slic,
                         id_fermier_prefix=id_prefix,
                         masca_compas=masca_compas,
                         masca_minimap=masca_minimap,
