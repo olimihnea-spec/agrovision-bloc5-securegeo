@@ -40,8 +40,8 @@ try:
 except ImportError:
     SKIMAGE_OK = False
 
-# Daca ruleaza ca pagina Streamlit (nu CLI), afiseaza status dependente
-if "streamlit" in sys.modules:
+# Bloc executat doar cand scriptul e rulat direct ca pagina Streamlit (nu la import)
+if __name__ == "__main__":
     import streamlit as st
     st.set_page_config(page_title="Detectie Parcele", page_icon="P", layout="wide")
     st.title("Detectie Parcele Agricole — SLIC + Watershed")
@@ -62,7 +62,6 @@ Foloseste: OpenCV + scikit-image + SLIC superpixels + Watershed + calcul arie/pe
         st.success("scikit-image disponibil.")
     st.info("Script CLI: `python detect_parcels_unified.py --input imagine.jpg --gsd 0.5`")
     st.caption("Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu | UCB Targu Jiu | APIA CJ Gorj | © 2026")
-    sys.exit(0)
 
 
 def build_overlay_mask(h: int, w: int,
