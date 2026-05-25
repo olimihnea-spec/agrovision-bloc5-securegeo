@@ -19,7 +19,6 @@ except ImportError:
 
 try:
     from skimage.segmentation import slic, watershed, find_boundaries
-    from skimage.color import rgb2lab
     from skimage.feature import peak_local_max
     from scipy import ndimage as ndi
     SKIMAGE_OK = True
@@ -342,6 +341,16 @@ def inscrie_text_parcela(img: np.ndarray, contur, info: dict,
                     font, font_scale, (255, 255, 255), grosime, cv2.LINE_AA)
 
     return rezultat
+
+
+def bgr_to_lab_sigur(img_bgr: np.ndarray) -> np.ndarray:
+    """Conversie BGR -> LAB fara skimage.rgb2lab, stabila pe Streamlit Cloud."""
+    img_bgr = np.ascontiguousarray(img_bgr[:, :, :3], dtype=np.uint8)
+    lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
+    lab[:, :, 0] *= 100.0 / 255.0
+    lab[:, :, 1] -= 128.0
+    lab[:, :, 2] -= 128.0
+    return np.ascontiguousarray(lab)
 
 
 def segmenteaza_kmeans(img_bgr: np.ndarray, k: int = 6) -> np.ndarray:
@@ -686,8 +695,7 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
 
     # ── 2. Mean Shift + SLIC in LAB ───────────────────────────────────────────
     smoothed_bgr = cv2.pyrMeanShiftFiltering(img_bgr, sp=18, sr=26)
-    smoothed_rgb = cv2.cvtColor(smoothed_bgr, cv2.COLOR_BGR2RGB)
-    lab = rgb2lab(smoothed_rgb)
+    lab = bgr_to_lab_sigur(smoothed_bgr)
 
     segments = slic(
         lab,
@@ -697,6 +705,7 @@ def detecteaza_slic_watershed(img_bgr: np.ndarray,
         start_label=1,
         mask=valid_bool,
         channel_axis=-1,
+        convert2lab=False,
     )
 
     # ── 3. Harta elevatie ─────────────────────────────────────────────────────
