@@ -60,7 +60,11 @@ st.markdown("""
     <div style='font-size:12px; opacity:0.8; margin-top:6px;'>
         Editor: Prof. Dr. Agatha Popescu (popescu.agatha@managusamv.ro) &nbsp;|&nbsp;
         Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu &nbsp;|&nbsp;
-        Publicare: octombrie 2026
+        Publicare: octombrie 2026<br>
+        <a href='http://managementjournal.usamv.ro/index.php/scientific-papers/current'
+           style='color:#A5D6A7; font-size:11px;' target='_blank'>
+            managementjournal.usamv.ro — Vol. 26(3) 2026
+        </a>
     </div>
 </div>
 """, unsafe_allow_html=True)
