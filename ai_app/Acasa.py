@@ -41,9 +41,14 @@ st.markdown("""
      border:2px solid #A5D6A7; box-shadow:0 4px 15px rgba(27,94,32,0.3);'>
     <div style='font-size:11px; opacity:0.85; letter-spacing:1.5px; text-transform:uppercase;
          margin-bottom:5px;'>
-        PUBLICATIE CONFIRMATA — octombrie 2026
+        PUBLICATIE ACCEPTATA OFICIAL — 25 mai 2026
     </div>
-    <div style='font-size:17px; font-weight:800; line-height:1.4; margin-bottom:6px;'>
+    <div style='font-size:14px; font-weight:800; line-height:1.5; margin-bottom:8px;
+         font-style:italic;'>
+        "Evaluarea Riscurilor Agricole Utilizand Imagini de la Dronuri si Invatare Profunda:
+        Un Studiu de Caz al Aplicatiei AgroVision in Judetul Gorj, Romania"
+    </div>
+    <div style='font-size:13px; font-weight:700; line-height:1.4; margin-bottom:5px;'>
         Scientific Papers Series Management, Economic Engineering
         in Agriculture and Rural Development
     </div>
@@ -53,8 +58,9 @@ st.markdown("""
         USAMVB Bucuresti &nbsp;|&nbsp; BDI Indexat
     </div>
     <div style='font-size:12px; opacity:0.8; margin-top:6px;'>
-        Editor: Prof. Dr. Agatha Popescu &nbsp;|&nbsp;
-        Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu
+        Editor: Prof. Dr. Agatha Popescu (popescu.agatha@managusamv.ro) &nbsp;|&nbsp;
+        Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu &nbsp;|&nbsp;
+        Publicare: octombrie 2026
     </div>
 </div>
 """, unsafe_allow_html=True)
