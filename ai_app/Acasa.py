@@ -127,19 +127,16 @@ with col_r1:
     st.page_link(
         "pages/32_PhantomGeo_Research.py",
         label="🛰️  PhantomGeo Research — Articol ISI",
-        use_container_width=True,
     )
 with col_r2:
     st.page_link(
         "pages/31_SecureGeo_Defense.py",
         label="🔐  SecureGeo Defense — Anti-Spoofing/Tampering",
-        use_container_width=True,
     )
 with col_r3:
     st.page_link(
         "pages/10b_SecureGeo_Platform.py",
         label="🗺️  SecureGeo Platform — Harta GNSS",
-        use_container_width=True,
     )
 
 st.divider()
