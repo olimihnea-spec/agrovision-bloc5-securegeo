@@ -269,7 +269,7 @@ tech = [
     ("scikit-learn",    "#3498db", "Machine Learning clasic — clasificare, regresie, clustering"),
     ("OpenCV",          "#27ae60", "Computer Vision — procesare imagini, detectie obiecte"),
     ("Hugging Face",    "#f39c12", "NLP — modele preantrenate, sentiment, rezumare"),
-    ("Ollama",          "#8e44ad", "LLM local — Llama 3, Mistral ruleaza pe calculatorul tau"),
+    ("LLM Generativ",   "#8e44ad", "AI Generativ — generare rapoarte, continut academic, RAG"),
     ("LangChain",       "#e74c3c", "Agenti AI — automatizare fluxuri, RAG, chatboti pe documente"),
     ("Streamlit",       "#1abc9c", "Interfata web — aplicatii AI interactive in Python"),
 ]
@@ -315,21 +315,18 @@ module = {
         ("17", "NER — extragere entitati: persoane, locatii, suprafete, NDVI", True),
         ("18", "Sinteza M3 — pipeline NLP complet", True),
     ],
-    "Modulul 4 (Zilele 19-24) — AI Generativ Local": [
-        ("19", "Ollama — modele LLM locale (Llama 3, Mistral) gratuit", True),
-        ("20", "Generator rapoarte APIA cu LLM local", True),
+    "Modulul 4 (Zilele 19-24) — AI Generativ": [
+        ("20", "Generator rapoarte APIA cu LLM", True),
         ("21", "Generare imagini AI — teorie si instrumente online", True),
         ("22", "Generator continut academic cu LLM", True),
         ("23", "RAG simplu — intreaba un document PDF", True),
         ("24", "Sinteza M4", True),
     ],
-    "Modulul 5 (Zilele 25-30) — AI Agenti + Finalizare": [
+    "Modulul 5 (Zilele 25-28) — AI Agenti + Finalizare": [
         ("25", "Agenti AI — automatizare fluxuri cu LangChain", True),
         ("26", "Agent care cauta articole stiintifice automat", True),
         ("27", "Agent inspector APIA — analizeaza parcele din fisier", True),
         ("28", "Dashboard AI complet — toate instrumentele integrate", True),
-        ("29", "Deploy pe Streamlit Cloud", True),
-        ("30", "Certificat final + roadmap AI 2026-2027", True),
     ],
 }
 
