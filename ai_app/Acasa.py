@@ -45,8 +45,8 @@ st.markdown("""
     </div>
     <div style='font-size:14px; font-weight:800; line-height:1.5; margin-bottom:8px;
          font-style:italic;'>
-        "Evaluarea Riscurilor Agricole Utilizand Imagini de la Dronuri si Invatare Profunda:
-        Un Studiu de Caz al Aplicatiei AgroVision in Judetul Gorj, Romania"
+        "Agricultural Risk Assessment Using Drone Imagery and Deep Learning:
+        A Case Study of the AgroVision Application in Gorj County, Romania"
     </div>
     <div style='font-size:13px; font-weight:700; line-height:1.4; margin-bottom:5px;'>
         Scientific Papers Series Management, Economic Engineering
