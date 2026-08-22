@@ -265,6 +265,71 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ─── PUBLICATIE ACCEPTATA — GEOMATICS (MDPI) ───────────────────────────────────
+st.markdown("""
+<div style='background:linear-gradient(135deg,#1B5E20 0%,#2E7D32 60%,#388E3C 100%);
+     border-radius:14px; padding:16px 22px; margin-bottom:14px; color:white;
+     border:2px solid #A5D6A7; box-shadow:0 4px 15px rgba(27,94,32,0.3);'>
+    <div style='font-size:11px; opacity:0.85; letter-spacing:1.5px; text-transform:uppercase;
+         margin-bottom:5px;'>
+        PUBLICATIE ACCEPTATA OFICIAL — 20 august 2026
+    </div>
+    <div style='font-size:14px; font-weight:800; line-height:1.5; margin-bottom:8px;
+         font-style:italic;'>
+        "GNSS Metadata Integrity in Consumer Smartphones During Commercial Flights:
+        GPS Spoofing Artifacts, JPEG Tampering Detection, and Implications
+        for UAV Precision Agriculture"
+    </div>
+    <div style='font-size:13px; font-weight:700; line-height:1.4; margin-bottom:5px;'>
+        Geomatics (MDPI) &nbsp;|&nbsp; ISSN 2673-7418
+    </div>
+    <div style='font-size:13px; opacity:0.9; line-height:1.6;'>
+        Manuscript ID: geomatics-4454600 &nbsp;|&nbsp;
+        Impact Factor 3.7 &nbsp;|&nbsp; CiteScore 4.6 &nbsp;|&nbsp;
+        Open Access &nbsp;|&nbsp; Basel, Elvetia
+    </div>
+    <div style='font-size:12px; opacity:0.8; margin-top:6px;'>
+        Autori: Emil-Catalin Schiopu, <b>Oliviu-Mihnea Gamulescu</b>, Florin Grofu,
+        Roxana-Gabriela Popa, Irina-Ramona Pecingina, Adrian Runceanu<br>
+        Facultatea de Inginerie, Universitatea "Constantin Brancusi" din Targu Jiu
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+_CERT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          "docs", "Acceptance-Certificate-geomatics-4454600.pdf")
+if os.path.exists(_CERT_PATH):
+    with open(_CERT_PATH, "rb") as _f:
+        _cert_bytes = _f.read()
+    _c1, _c2 = st.columns([1, 3])
+    with _c1:
+        st.download_button(
+            "Descarca certificatul de acceptare (PDF)",
+            data=_cert_bytes,
+            file_name="Acceptance-Certificate-geomatics-4454600.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+    with _c2:
+        st.caption(
+            "Certificat oficial emis de MDPI (Basel, Elvetia), semnat de Stefan Tochev, "
+            "Chief Executive Officer — atesta acceptarea manuscrisului in revista Geomatics."
+        )
+    with st.expander("Vizualizeaza certificatul de acceptare"):
+        _b64 = base64.b64encode(_cert_bytes).decode("utf-8")
+        st.markdown(
+            f'<iframe src="data:application/pdf;base64,{_b64}" '
+            f'width="100%" height="600" style="border:1px solid #ccc; border-radius:8px;">'
+            f'</iframe>',
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "Daca previzualizarea nu se incarca in browserul dumneavoastra, "
+            "folositi butonul de descarcare de mai sus."
+        )
+
+st.divider()
+
 # Metrici cheie
 m1, m2, m3, m4, m5 = st.columns(5)
 with m1:

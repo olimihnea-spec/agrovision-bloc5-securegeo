@@ -70,6 +70,40 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
+<div style='background:linear-gradient(135deg,#0D47A1 0%,#1565C0 60%,#1B5E20 100%);
+     border-radius:14px; padding:16px 22px; margin-bottom:18px; color:white;
+     border:2px solid #90CAF9; box-shadow:0 4px 15px rgba(13,71,161,0.3);'>
+    <div style='font-size:11px; opacity:0.85; letter-spacing:1.5px; text-transform:uppercase;
+         margin-bottom:5px;'>
+        PUBLICATIE ACCEPTATA OFICIAL — 20 august 2026 &nbsp;|&nbsp; ISI / WoS
+    </div>
+    <div style='font-size:14px; font-weight:800; line-height:1.5; margin-bottom:8px;
+         font-style:italic;'>
+        "GNSS Metadata Integrity in Consumer Smartphones During Commercial Flights:
+        GPS Spoofing Artifacts, JPEG Tampering Detection, and Implications
+        for UAV Precision Agriculture"
+    </div>
+    <div style='font-size:13px; font-weight:700; line-height:1.4; margin-bottom:5px;'>
+        Geomatics (MDPI) &nbsp;|&nbsp; ISSN 2673-7418 &nbsp;|&nbsp;
+        Impact Factor 3.7 &nbsp;|&nbsp; CiteScore 4.6
+    </div>
+    <div style='font-size:13px; opacity:0.9; line-height:1.6;'>
+        Manuscript ID: geomatics-4454600 &nbsp;|&nbsp; Open Access &nbsp;|&nbsp;
+        MDPI, Basel, Elvetia
+    </div>
+    <div style='font-size:12px; opacity:0.8; margin-top:6px;'>
+        Autori: Emil-Catalin Schiopu, <b>Oliviu-Mihnea Gamulescu</b>, Florin Grofu,
+        Roxana-Gabriela Popa, Irina-Ramona Pecingina, Adrian Runceanu<br>
+        Facultatea de Inginerie, Universitatea "Constantin Brancusi" din Targu Jiu<br>
+        <span style='font-size:11px;'>
+            Certificatul oficial de acceptare este disponibil in pagina
+            <b>SecureGeo Platform</b>.
+        </span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
 <div style='display:flex; align-items:center; gap:16px; margin-bottom:16px;'>
     <div style='font-size:56px;'>🤖</div>
     <div>
