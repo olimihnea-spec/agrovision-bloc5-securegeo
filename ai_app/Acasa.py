@@ -75,7 +75,7 @@ st.markdown("""
      border:2px solid #90CAF9; box-shadow:0 4px 15px rgba(13,71,161,0.3);'>
     <div style='font-size:11px; opacity:0.85; letter-spacing:1.5px; text-transform:uppercase;
          margin-bottom:5px;'>
-        PUBLICATIE ACCEPTATA OFICIAL — 20 august 2026 &nbsp;|&nbsp; ISI / WoS
+        PUBLICATA — 23 august 2026 &nbsp;|&nbsp; ISI / WoS
     </div>
     <div style='font-size:14px; font-weight:800; line-height:1.5; margin-bottom:8px;
          font-style:italic;'>
@@ -88,10 +88,21 @@ st.markdown("""
         Impact Factor 3.7 &nbsp;|&nbsp; CiteScore 4.6
     </div>
     <div style='font-size:13px; opacity:0.9; line-height:1.6;'>
-        Manuscript ID: geomatics-4454600 &nbsp;|&nbsp; Open Access &nbsp;|&nbsp;
+        Geomatics <b>6(5):94</b> &nbsp;|&nbsp; Open Access &nbsp;|&nbsp;
         MDPI, Basel, Elvetia
     </div>
-    <div style='font-size:12px; opacity:0.8; margin-top:6px;'>
+    <div style='font-size:13px; margin-top:8px;'>
+        <a href='https://doi.org/10.3390/geomatics6050094' target='_blank'
+           style='color:#FFFFFF; background:rgba(255,255,255,0.18);
+                  padding:6px 14px; border-radius:6px; text-decoration:none;
+                  font-weight:700; border:1px solid rgba(255,255,255,0.45);'>
+            Citeste articolul integral &nbsp;&rarr;
+        </a>
+        <span style='font-size:11px; opacity:0.85; margin-left:10px;'>
+            DOI: 10.3390/geomatics6050094
+        </span>
+    </div>
+    <div style='font-size:12px; opacity:0.8; margin-top:8px;'>
         Autori: Emil-Catalin Schiopu, <b>Oliviu-Mihnea Gamulescu</b>, Florin Grofu,
         Roxana-Gabriela Popa, Irina-Ramona Pecingina, Adrian Runceanu<br>
         Facultatea de Inginerie, Universitatea "Constantin Brancusi" din Targu Jiu<br>
