@@ -36,40 +36,6 @@ st.sidebar.progress(30/30)
 st.sidebar.markdown(f"**Data curenta:** {date.today().strftime('%d.%m.%Y')}")
 
 st.markdown("""
-<div style='background:linear-gradient(135deg,#1B5E20 0%,#2E7D32 60%,#388E3C 100%);
-     border-radius:14px; padding:16px 22px; margin-bottom:18px; color:white;
-     border:2px solid #A5D6A7; box-shadow:0 4px 15px rgba(27,94,32,0.3);'>
-    <div style='font-size:11px; opacity:0.85; letter-spacing:1.5px; text-transform:uppercase;
-         margin-bottom:5px;'>
-        PUBLICATIE ACCEPTATA OFICIAL — 25 mai 2026
-    </div>
-    <div style='font-size:14px; font-weight:800; line-height:1.5; margin-bottom:8px;
-         font-style:italic;'>
-        "Agricultural Risk Assessment Using Drone Imagery and Deep Learning:
-        A Case Study of the AgroVision Application in Gorj County, Romania"
-    </div>
-    <div style='font-size:13px; font-weight:700; line-height:1.4; margin-bottom:5px;'>
-        Scientific Papers Series Management, Economic Engineering
-        in Agriculture and Rural Development
-    </div>
-    <div style='font-size:13px; opacity:0.9; line-height:1.6;'>
-        Vol. 26, Issue 3, 2026 &nbsp;|&nbsp;
-        PRINT ISSN 2284-7995 &nbsp;|&nbsp; E-ISSN 2285-3952 &nbsp;|&nbsp;
-        USAMVB Bucuresti &nbsp;|&nbsp; BDI Indexat
-    </div>
-    <div style='font-size:12px; opacity:0.8; margin-top:6px;'>
-        Editor: Prof. Dr. Agatha POPESCU (Redactor Executiv) &nbsp;|&nbsp;
-        Autor: Prof. Asoc. Dr. Oliviu Mihnea GAMULESCU<br>
-        Afisata pana la sfarsitul lunii octombrie 2026 pe site-ul web:<br>
-        <a href='http://managementjournal.usamv.ro/index.php/stiintifice-papers/current'
-           style='color:#A5D6A7; font-size:11px;' target='_blank'>
-            managementjournal.usamv.ro/index.php/stiintifice-papers/current
-        </a>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown("""
 <div style='background:linear-gradient(135deg,#0D47A1 0%,#1565C0 60%,#1B5E20 100%);
      border-radius:14px; padding:16px 22px; margin-bottom:18px; color:white;
      border:2px solid #90CAF9; box-shadow:0 4px 15px rgba(13,71,161,0.3);'>
@@ -110,6 +76,40 @@ st.markdown("""
             Certificatul oficial de acceptare este disponibil in pagina
             <b>SecureGeo Platform</b>.
         </span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div style='background:linear-gradient(135deg,#1B5E20 0%,#2E7D32 60%,#388E3C 100%);
+     border-radius:14px; padding:16px 22px; margin-bottom:18px; color:white;
+     border:2px solid #A5D6A7; box-shadow:0 4px 15px rgba(27,94,32,0.3);'>
+    <div style='font-size:11px; opacity:0.85; letter-spacing:1.5px; text-transform:uppercase;
+         margin-bottom:5px;'>
+        PUBLICATIE ACCEPTATA OFICIAL — 25 mai 2026
+    </div>
+    <div style='font-size:14px; font-weight:800; line-height:1.5; margin-bottom:8px;
+         font-style:italic;'>
+        "Agricultural Risk Assessment Using Drone Imagery and Deep Learning:
+        A Case Study of the AgroVision Application in Gorj County, Romania"
+    </div>
+    <div style='font-size:13px; font-weight:700; line-height:1.4; margin-bottom:5px;'>
+        Scientific Papers Series Management, Economic Engineering
+        in Agriculture and Rural Development
+    </div>
+    <div style='font-size:13px; opacity:0.9; line-height:1.6;'>
+        Vol. 26, Issue 3, 2026 &nbsp;|&nbsp;
+        PRINT ISSN 2284-7995 &nbsp;|&nbsp; E-ISSN 2285-3952 &nbsp;|&nbsp;
+        USAMVB Bucuresti &nbsp;|&nbsp; BDI Indexat
+    </div>
+    <div style='font-size:12px; opacity:0.8; margin-top:6px;'>
+        Editor: Prof. Dr. Agatha POPESCU (Redactor Executiv) &nbsp;|&nbsp;
+        Autor: Prof. Asoc. Dr. Oliviu Mihnea GAMULESCU<br>
+        Afisata pana la sfarsitul lunii octombrie 2026 pe site-ul web:<br>
+        <a href='http://managementjournal.usamv.ro/index.php/stiintifice-papers/current'
+           style='color:#A5D6A7; font-size:11px;' target='_blank'>
+            managementjournal.usamv.ro/index.php/stiintifice-papers/current
+        </a>
     </div>
 </div>
 """, unsafe_allow_html=True)
