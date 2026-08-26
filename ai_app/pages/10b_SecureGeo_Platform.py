@@ -302,7 +302,13 @@ st.markdown("""
     <div style='font-size:12px; opacity:0.8; margin-top:8px;'>
         Autori: Emil-Catalin Schiopu, <b>Oliviu-Mihnea Gamulescu</b>, Florin Grofu,
         Roxana-Gabriela Popa, Irina-Ramona Pecingina, Adrian Runceanu<br>
-        Facultatea de Inginerie, Universitatea "Constantin Brancusi" din Targu Jiu
+        Facultatea de Inginerie, Universitatea "Constantin Brancusi" din Targu Jiu<br>
+        ORCID Oliviu-Mihnea Gamulescu:
+        <a href='https://orcid.org/0009-0002-3019-3790' target='_blank'
+           style='color:#E8F5E9; text-decoration:underline;'>0009-0002-3019-3790</a>
+        &nbsp;|&nbsp; DOI:
+        <a href='https://doi.org/10.3390/geomatics6050094' target='_blank'
+           style='color:#E8F5E9; text-decoration:underline;'>10.3390/geomatics6050094</a>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -509,20 +515,33 @@ with tab1:
             "icon": "PROPUNERE",
         },
         {
-            "data": "In curs",
-            "titlu": "Articol ISI — MDPI Drones (IF 4.8, Q1)",
-            "detalii": "Offline Georeferencing Capability as a Digital Sovereignty Requirement: A Flight-Based Evaluation of Mobile Applications for Agricultural Field Inspections",
-            "status": "IN LUCRU",
-            "culoare": "#e67e22",
-            "icon": "ARTICOL",
+            "data": "23 aug 2026",
+            "titlu": "Articol publicat — Geomatics (MDPI), IF 3.7",
+            "detalii": ('"GNSS Metadata Integrity in Consumer Smartphones During '
+                        'Commercial Flights: GPS Spoofing Artifacts, JPEG Tampering '
+                        'Detection, and Implications for UAV Precision Agriculture". '
+                        'Geomatics 6(5):94 — DOI: 10.3390/geomatics6050094. '
+                        'Autori: Schiopu, Gamulescu (ORCID 0009-0002-3019-3790), '
+                        'Grofu, Popa, Pecingina, Runceanu. Acceptat 20 aug 2026, '
+                        'publicat 23 aug 2026, Open Access CC BY.'),
+            "status": "PUBLICAT",
+            "culoare": "#16a085",
+            "icon": "ISI",
         },
         {
-            "data": "Iulie 2026",
-            "titlu": "Workshop ACE2-EU — UCB Targu Jiu",
-            "detalii": "Prezentare rezultate, colaborare cross-border, finantare UEFISCDI/ACE2-EU.",
-            "status": "PLANIFICAT",
-            "culoare": "#95a5a6",
-            "icon": "WORKSHOP",
+            "data": "In curs",
+            "titlu": "Articol ISI — GPS Solutions (Springer), IF 4.2",
+            "detalii": ('"GNSS Anomaly Classification via Tripartite EXIF–NMEA–ADS-B '
+                        'Protocol: Field Study in Madeira, Portugal". Gamulescu '
+                        '(ORCID 0009-0002-3019-3790) & Runceanu '
+                        '(ORCID 0000-0001-5964-1636), UCB Targu Jiu. Campanie de teren '
+                        'Madeira 24 iun – 1 iul 2026; protocol pre-inregistrat pe '
+                        'Zenodo la 14 iun 2026 — DOI: 10.5281/zenodo.20687660. '
+                        'Manuscris finalizat 22-23 aug 2026, aflat in revizuire interna '
+                        'inainte de depunerea pe portalul Springer.'),
+            "status": "IN LUCRU",
+            "culoare": "#e67e22",
+            "icon": "GPS SOL",
         },
     ]
 
